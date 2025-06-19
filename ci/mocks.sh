@@ -1,0 +1,2 @@
+ ## A better script is needed. But having these defined in a single place makes it more maintainable.
+ mockgen -destination=mocks/git_repository_provider_mock.go -package=mocks superspreader/app/domain GitRepositoryProvider
