@@ -1,0 +1,7 @@
+ providers:
+   - provider: github
+     username: that-guy-iain
+     token: fake-token
+   - provider: bitbucket
+     username: bb-iain
+     token: bitbucket-token
