@@ -85,7 +85,12 @@ func IsValidForSuperspreader(repo *git.Repository, config domain.Config) (bool, 
 	return strings.Contains(contentStr, config.Identifier.Content), nil
 }
 
-func CopyFiles(repo *git.Repository, fs billy.Filesystem, config domain.FileConfig, provider domain.ProviderConfig) error {
+func CopyFiles(
+	repo *git.Repository,
+	fs billy.Filesystem,
+	config domain.FileConfig,
+	provider domain.ProviderConfig,
+) error {
 
 	worktree, err := repo.Worktree()
 
@@ -102,6 +107,11 @@ func CopyFiles(repo *git.Repository, fs billy.Filesystem, config domain.FileConf
 		}
 
 		for _, file := range files {
+
+			if isExcluded(file, config.Exclude) {
+				continue
+			}
+
 			parts := strings.Split(file, "/")
 			parts = parts[:len(parts)-1]
 			directory := strings.Join(parts, "/")
@@ -129,18 +139,15 @@ func CopyFiles(repo *git.Repository, fs billy.Filesystem, config domain.FileConf
 				return err
 			}
 			_, err = f.Write(content)
-		}
-
-		for _, file := range files {
-			_, err := worktree.Add(file)
+			_, err = worktree.Add(file)
 			if err != nil {
 				return err
 			}
 		}
-		_, err = worktree.Commit("Add files from local filesystem (in-memory)", &git.CommitOptions{
+		_, err = worktree.Commit("Updated via superspreader", &git.CommitOptions{
 			Author: &object.Signature{
-				Name:  "Go-Git User",
-				Email: "go-git-user@example.com",
+				Name:  "Superspreader",
+				Email: "superspreader@example.com",
 				When:  time.Now(),
 			},
 		})
@@ -148,11 +155,23 @@ func CopyFiles(repo *git.Repository, fs billy.Filesystem, config domain.FileConf
 			Auth: &http.BasicAuth{Username: provider.Username, Password: provider.Token},
 		})
 		if err != nil {
+			if err == git.NoErrAlreadyUpToDate {
+				return nil
+			}
 			return err
 		}
 	}
 
 	return nil
+}
+
+func isExcluded(filename string, excluded []string) bool {
+	for _, excludedFile := range excluded {
+		if filename == excludedFile {
+			return true
+		}
+	}
+	return false
 }
 
 func getAllFilenames(filename string) ([]string, error) {

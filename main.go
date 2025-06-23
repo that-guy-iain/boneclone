@@ -75,7 +75,6 @@ func main() {
 
 							return
 						}
-						fmt.Printf("repo: %b\n", valid)
 						if valid {
 
 							files := git.CopyFiles(gitRepo, fs, config.Files, pp)
