@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/urfave/cli/v3"
 	"log"
 	"os"
 	"superspreader/app/domain"
 	"superspreader/app/infra/git"
 	"superspreader/app/infra/git/repository_providers"
-
-	"github.com/urfave/cli/v3"
+	"sync"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -37,6 +37,7 @@ func main() {
 		Name:                  "run",
 		Usage:                 "Run superspreader",
 		Action: func(cxt context.Context, c *cli.Command) error {
+			var wg sync.WaitGroup
 			configFile := c.String("config")
 
 			if err := k.Load(file.Provider(configFile), yaml.Parser()); err != nil {
@@ -53,25 +54,40 @@ func main() {
 
 				provider, _ := repository_providers.NewProvider(pp)
 				repositories, _ := provider.GetRepositories()
+
 				for _, repo := range repositories {
-					fmt.Printf("repo: %s\n", repo.Url)
-					gitRepo, err := git.CloneGit(repo, pp)
+					wg.Add(1)
+					go func(repo domain.GitRepository) {
+						defer wg.Done()
 
-					if err != nil {
-						fmt.Printf("error cloning repo: %v\n", err)
-						continue
-					}
+						fmt.Printf("repo: %s\n", repo.Url)
+						gitRepo, err := git.CloneGit(repo, pp)
 
-					valid, err := git.IsValidForSuperspreader(gitRepo, config)
+						if err != nil {
+							fmt.Printf("error cloning repo: %v\n", err)
+							return
+						}
 
-					if err != nil {
-						fmt.Printf("error checking repo: %v\n", err)
-						continue
-					}
-					fmt.Printf("repo: %b\n", valid)
+						valid, err := git.IsValidForSuperspreader(gitRepo, config)
+
+						if err != nil {
+							fmt.Printf("error checking repo: %v\n", err)
+
+							return
+						}
+						fmt.Printf("repo: %b\n", valid)
+						if valid {
+
+							files := git.CopyFiles(gitRepo, config.Files)
+							if files != nil {
+								fmt.Printf("files: %v\n", files)
+							}
+						}
+					}(repo)
 				}
 
 			}
+			wg.Wait()
 			return nil
 		},
 	}
