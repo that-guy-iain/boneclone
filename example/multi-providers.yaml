@@ -5,3 +5,9 @@
    - provider: bitbucket
      username: bb-iain
      token: bitbucket-token
+files:
+  include:
+    - ci
+identifier:
+   filename: .superspreader
+   content: golang

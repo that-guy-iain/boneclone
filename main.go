@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"superspreader/app/domain"
+	"superspreader/app/infra/git"
+	"superspreader/app/infra/git/repository_providers"
 
 	"github.com/urfave/cli/v3"
 
@@ -31,8 +33,9 @@ func main() {
 				Aliases: []string{"c"},
 			},
 		},
-		Name:  "run",
-		Usage: "Run superspreader",
+		EnableShellCompletion: true,
+		Name:                  "run",
+		Usage:                 "Run superspreader",
 		Action: func(cxt context.Context, c *cli.Command) error {
 			configFile := c.String("config")
 
@@ -47,7 +50,27 @@ func main() {
 				log.Fatalf("error unmarshalling config: %v", err)
 			}
 			for _, pp := range config.Providers {
-				fmt.Printf("%v\n", pp.Provider)
+
+				provider, _ := repository_providers.NewProvider(pp)
+				repositories, _ := provider.GetRepositories()
+				for _, repo := range repositories {
+					fmt.Printf("repo: %s\n", repo.Url)
+					gitRepo, err := git.CloneGit(repo, pp)
+
+					if err != nil {
+						fmt.Printf("error cloning repo: %v\n", err)
+						continue
+					}
+
+					valid, err := git.IsValidForSuperspreader(gitRepo, config)
+
+					if err != nil {
+						fmt.Printf("error checking repo: %v\n", err)
+						continue
+					}
+					fmt.Printf("repo: %b\n", valid)
+				}
+
 			}
 			return nil
 		},

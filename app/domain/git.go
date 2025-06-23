@@ -1,7 +1,7 @@
 package domain
 
 type GitRepositoryProvider interface {
-	GetRepositories() []GitRepository
+	GetRepositories() ([]GitRepository, error)
 }
 
 type GitRepository struct {
