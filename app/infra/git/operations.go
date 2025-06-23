@@ -113,11 +113,9 @@ func CopyFiles(repo *git.Repository, fs billy.Filesystem, config domain.FileConf
 					if err != nil {
 						return err
 					}
+				} else {
+					return err
 				}
-			}
-
-			if err != nil {
-				return err
 			}
 
 			f, err := fs.Create(file)
