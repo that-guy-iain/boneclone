@@ -2,10 +2,14 @@ package git
 
 import (
 	"fmt"
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/memory"
+	"time"
+
+	"github.com/go-git/go-billy/v5/memfs"
 	"io"
 	"os"
 	"strings"
@@ -14,32 +18,32 @@ import (
 
 const GIT_DEPTH = 1
 
-func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, error) {
+func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, billy.Filesystem, error) {
+	fs := memfs.New()
 	auth := &http.BasicAuth{
 		Username: config.Username,
 		Password: config.Token,
 	}
-	r, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
+	r, err := git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
 		URL:   repo.Url,
 		Depth: GIT_DEPTH,
 		Auth:  auth,
+		Bare:  false,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return r, nil
+	return r, fs, nil
 }
 
 func IsValidForSuperspreader(repo *git.Repository, config domain.Config) (bool, error) {
 
 	headRef, err := repo.Head()
-
 	if err != nil {
 		return false, err
 	}
-
 	headCommit, err := repo.CommitObject(headRef.Hash())
 
 	if err != nil {
@@ -71,6 +75,7 @@ func IsValidForSuperspreader(repo *git.Repository, config domain.Config) (bool, 
 	}
 	defer reader.Close()
 
+	// Maybe change to io.Copy
 	content, err := io.ReadAll(reader)
 	if err != nil {
 		return false, err
@@ -80,17 +85,73 @@ func IsValidForSuperspreader(repo *git.Repository, config domain.Config) (bool, 
 	return strings.Contains(contentStr, config.Identifier.Content), nil
 }
 
-func CopyFiles(repo *git.Repository, config domain.FileConfig) error {
+func CopyFiles(repo *git.Repository, fs billy.Filesystem, config domain.FileConfig, provider domain.ProviderConfig) error {
 
-	for _, file := range config.Include {
+	worktree, err := repo.Worktree()
 
-		files, err := getAllFilenames(file)
+	if err != nil {
+		return err
+	}
+
+	for _, definedFile := range config.Include {
+
+		files, err := getAllFilenames(definedFile)
 
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("files: %v\n", files)
+		for _, file := range files {
+			parts := strings.Split(file, "/")
+			parts = parts[:len(parts)-1]
+			directory := strings.Join(parts, "/")
+			_, err := fs.Lstat(directory)
+
+			if err != nil {
+				if err == os.ErrNotExist {
+					err := fs.MkdirAll(directory, 0755)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+			if err != nil {
+				return err
+			}
+
+			f, err := fs.Create(file)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			content, err := os.ReadFile(file)
+			if err != nil {
+				return err
+			}
+			_, err = f.Write(content)
+		}
+
+		for _, file := range files {
+			_, err := worktree.Add(file)
+			if err != nil {
+				return err
+			}
+		}
+		_, err = worktree.Commit("Add files from local filesystem (in-memory)", &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Go-Git User",
+				Email: "go-git-user@example.com",
+				When:  time.Now(),
+			},
+		})
+		err = repo.Push(&git.PushOptions{
+			Auth: &http.BasicAuth{Username: provider.Username, Password: provider.Token},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

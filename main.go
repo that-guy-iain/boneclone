@@ -61,7 +61,7 @@ func main() {
 						defer wg.Done()
 
 						fmt.Printf("repo: %s\n", repo.Url)
-						gitRepo, err := git.CloneGit(repo, pp)
+						gitRepo, fs, err := git.CloneGit(repo, pp)
 
 						if err != nil {
 							fmt.Printf("error cloning repo: %v\n", err)
@@ -78,7 +78,7 @@ func main() {
 						fmt.Printf("repo: %b\n", valid)
 						if valid {
 
-							files := git.CopyFiles(gitRepo, config.Files)
+							files := git.CopyFiles(gitRepo, fs, config.Files, pp)
 							if files != nil {
 								fmt.Printf("files: %v\n", files)
 							}
