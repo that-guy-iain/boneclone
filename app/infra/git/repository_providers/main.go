@@ -1,9 +1,9 @@
 package repository_providers
 
 import (
+	"boneclone/app/domain"
 	"fmt"
 	"strings"
-	"superspreader/app/domain"
 )
 
 func NewProvider(config domain.ProviderConfig) (domain.GitRepositoryProvider, error) {

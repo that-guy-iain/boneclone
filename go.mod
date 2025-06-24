@@ -1,4 +1,4 @@
-module superspreader
+module boneclone
 
 go 1.24
 

@@ -1,14 +1,14 @@
 package main
 
 import (
+	"boneclone/app/domain"
+	"boneclone/app/infra/git"
+	"boneclone/app/infra/git/repository_providers"
 	"context"
 	"fmt"
 	"github.com/urfave/cli/v3"
 	"log"
 	"os"
-	"superspreader/app/domain"
-	"superspreader/app/infra/git"
-	"superspreader/app/infra/git/repository_providers"
 	"sync"
 
 	"github.com/knadh/koanf/parsers/yaml"
@@ -28,14 +28,14 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
-				Value:   ".superspreader.yaml",
+				Value:   ".boneclone.yaml",
 				Usage:   "The config file to be used",
 				Aliases: []string{"c"},
 			},
 		},
 		EnableShellCompletion: true,
 		Name:                  "run",
-		Usage:                 "Run superspreader",
+		Usage:                 "Run boneclone",
 		Action: func(cxt context.Context, c *cli.Command) error {
 			var wg sync.WaitGroup
 			configFile := c.String("config")
@@ -68,7 +68,7 @@ func main() {
 							return
 						}
 
-						valid, err := git.IsValidForSuperspreader(gitRepo, config)
+						valid, err := git.IsValidForboneclone(gitRepo, config)
 
 						if err != nil {
 							fmt.Printf("error checking repo: %v\n", err)

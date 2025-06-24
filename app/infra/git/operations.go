@@ -9,11 +9,11 @@ import (
 	"github.com/go-git/go-git/v6/storage/memory"
 	"time"
 
+	"boneclone/app/domain"
 	"github.com/go-git/go-billy/v5/memfs"
 	"io"
 	"os"
 	"strings"
-	"superspreader/app/domain"
 )
 
 const GIT_DEPTH = 1
@@ -38,7 +38,7 @@ func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Rep
 	return r, fs, nil
 }
 
-func IsValidForSuperspreader(repo *git.Repository, config domain.Config) (bool, error) {
+func IsValidForboneclone(repo *git.Repository, config domain.Config) (bool, error) {
 
 	headRef, err := repo.Head()
 	if err != nil {
@@ -144,10 +144,10 @@ func CopyFiles(
 				return err
 			}
 		}
-		_, err = worktree.Commit("Updated via superspreader", &git.CommitOptions{
+		_, err = worktree.Commit("Updated via boneclone", &git.CommitOptions{
 			Author: &object.Signature{
-				Name:  "Superspreader",
-				Email: "superspreader@example.com",
+				Name:  "boneclone",
+				Email: "boneclone@example.com",
 				When:  time.Now(),
 			},
 		})
