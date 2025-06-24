@@ -14,6 +14,8 @@
 files:
   include:
     - ci
+  exclude:
+    - ci/mocks.sh
 identifier:
    filename: .boneclone
    content: golang
