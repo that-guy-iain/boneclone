@@ -55,7 +55,7 @@ func main() {
 				provider, _ := repository_providers.NewProvider(pp)
 				repositories, _ := provider.GetRepositories()
 
-				for _, repo := range repositories {
+				for _, repo := range *repositories {
 					wg.Add(1)
 					go func(repo domain.GitRepository) {
 						defer wg.Done()

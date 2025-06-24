@@ -11,7 +11,7 @@ type GithubRepositoryProvider struct {
 	orgName string
 }
 
-func (g GithubRepositoryProvider) GetRepositories() ([]domain.GitRepository, error) {
+func (g GithubRepositoryProvider) GetRepositories() (*[]domain.GitRepository, error) {
 	repos, _, err := g.github.Repositories.ListByOrg(context.Background(), g.orgName, nil)
 
 	if err != nil {
@@ -25,7 +25,7 @@ func (g GithubRepositoryProvider) GetRepositories() ([]domain.GitRepository, err
 		})
 	}
 
-	return output, nil
+	return &output, nil
 }
 
 func NewGithubRepositoryProvider(token string, orgName string) (domain.GitRepositoryProvider, error) {

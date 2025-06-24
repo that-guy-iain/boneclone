@@ -13,23 +13,23 @@ type AzureRepositoryProvider struct {
 	ctx        context.Context
 }
 
-func (a AzureRepositoryProvider) GetRepositories() ([]domain.GitRepository, error) {
+func (a AzureRepositoryProvider) GetRepositories() (*[]domain.GitRepository, error) {
 	var output []domain.GitRepository
 
 	coreClient, err := core.NewClient(a.ctx, a.connection)
 	getProjectsArgs := core.GetProjectsArgs{}
 	if err != nil {
-		return output, err
+		return nil, err
 	}
 
 	gitClient, err := git.NewClient(a.ctx, a.connection)
 	if err != nil {
-		return output, err
+		return nil, err
 	}
 
 	projectsResponse, err := coreClient.GetProjects(a.ctx, getProjectsArgs)
 	if err != nil {
-		return output, err
+		return nil, err
 	}
 
 	trueValue := true
@@ -43,7 +43,7 @@ func (a AzureRepositoryProvider) GetRepositories() ([]domain.GitRepository, erro
 
 		repositories, err := gitClient.GetRepositories(a.ctx, getReposArgs)
 		if err != nil {
-			return output, err
+			return nil, err
 		}
 
 		if repositories != nil {
@@ -56,7 +56,7 @@ func (a AzureRepositoryProvider) GetRepositories() ([]domain.GitRepository, erro
 		}
 	}
 
-	return output, nil
+	return &output, nil
 }
 
 func NewAzureRepositoryProvider(token string, org string) (domain.GitRepositoryProvider, error) {

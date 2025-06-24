@@ -10,7 +10,7 @@ type GitlabRepositoryProvider struct {
 	org    string
 }
 
-func (g GitlabRepositoryProvider) GetRepositories() ([]domain.GitRepository, error) {
+func (g GitlabRepositoryProvider) GetRepositories() (*[]domain.GitRepository, error) {
 
 	trueValue := true
 	opts := &gitlab.ListGroupProjectsOptions{
@@ -27,7 +27,7 @@ func (g GitlabRepositoryProvider) GetRepositories() ([]domain.GitRepository, err
 
 		projects, resp, err := g.gitlab.Groups.ListGroupProjects(g.org, opts)
 		if err != nil {
-			return output, err
+			return nil, err
 		}
 
 		allProjects = append(allProjects, projects...)
@@ -46,7 +46,7 @@ func (g GitlabRepositoryProvider) GetRepositories() ([]domain.GitRepository, err
 		})
 	}
 
-	return output, nil
+	return &output, nil
 }
 
 func NewGitlabRepositoryProvider(token string, org string) (domain.GitRepositoryProvider, error) {
