@@ -64,7 +64,7 @@ func main() {
 						gitRepo, fs, err := git.CloneGit(repo, pp)
 
 						if err != nil {
-							fmt.Printf("error cloning repo: %v\n", err)
+							fmt.Printf("error cloning repo %s: %v\n", repo.Url, err)
 							return
 						}
 
