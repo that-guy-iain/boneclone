@@ -9,8 +9,8 @@ import (
 	"github.com/go-git/go-git/v6/storage/memory"
 	"time"
 
-	"boneclone/app/domain"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/that-guy-iain/boneclone/app/domain"
 	"io"
 	"os"
 	"strings"
@@ -38,7 +38,7 @@ func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Rep
 	return r, fs, nil
 }
 
-func IsValidForboneclone(repo *git.Repository, config domain.Config) (bool, error) {
+func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, error) {
 
 	headRef, err := repo.Head()
 	if err != nil {

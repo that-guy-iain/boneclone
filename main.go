@@ -1,11 +1,11 @@
 package main
 
 import (
-	"boneclone/app/domain"
-	"boneclone/app/infra/git"
-	"boneclone/app/infra/git/repository_providers"
 	"context"
 	"fmt"
+	"github.com/that-guy-iain/boneclone/app/domain"
+	"github.com/that-guy-iain/boneclone/app/infra/git"
+	"github.com/that-guy-iain/boneclone/app/infra/git/repository_providers"
 	"github.com/urfave/cli/v3"
 	"log"
 	"os"
@@ -28,14 +28,14 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
-				Value:   ".boneclone.yaml",
+				Value:   ".github.com/that-guy-iain/boneclone.yaml",
 				Usage:   "The config file to be used",
 				Aliases: []string{"c"},
 			},
 		},
 		EnableShellCompletion: true,
 		Name:                  "run",
-		Usage:                 "Run boneclone",
+		Usage:                 "Run BoneClone",
 		Action: func(cxt context.Context, c *cli.Command) error {
 			var wg sync.WaitGroup
 			configFile := c.String("config")
@@ -68,7 +68,7 @@ func main() {
 							return
 						}
 
-						valid, err := git.IsValidForboneclone(gitRepo, config)
+						valid, err := git.IsValidForBoneClone(gitRepo, config)
 
 						if err != nil {
 							fmt.Printf("error checking repo: %v\n", err)

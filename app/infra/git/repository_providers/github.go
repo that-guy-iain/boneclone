@@ -1,8 +1,8 @@
 package repository_providers
 
 import (
-	"boneclone/app/domain"
 	"context"
+	"github.com/that-guy-iain/boneclone/app/domain"
 )
 import "github.com/google/go-github/v72/github"
 

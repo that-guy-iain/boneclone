@@ -1,7 +1,7 @@
 package repository_providers
 
 import (
-	"boneclone/app/domain"
+	"github.com/that-guy-iain/boneclone/app/domain"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 

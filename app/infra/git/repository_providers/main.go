@@ -1,8 +1,8 @@
 package repository_providers
 
 import (
-	"boneclone/app/domain"
 	"fmt"
+	"github.com/that-guy-iain/boneclone/app/domain"
 	"strings"
 )
 
