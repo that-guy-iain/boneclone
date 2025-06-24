@@ -3,10 +3,14 @@
      username: that-guy-iain
      org: billabear
      token: fake-token
-   - provider: bitbucket
+   - provider: gitlab
      username: bb-iain
      org: name
-     token: bitbucket-token
+     token: gitlab-token
+   - provider: azure
+     username: azure-devops-username
+     org: "https://dev.azure.com/example/"
+     token: gitlab-token
 files:
   include:
     - ci
