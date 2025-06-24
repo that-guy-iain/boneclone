@@ -1,9 +1,11 @@
  providers:
    - provider: github
      username: that-guy-iain
+     org: billabear
      token: fake-token
    - provider: bitbucket
      username: bb-iain
+     org: name
      token: bitbucket-token
 files:
   include:

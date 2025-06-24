@@ -9,6 +9,7 @@ type Config struct {
 type ProviderConfig struct {
 	Provider string `koanf:"provider"`
 	Username string `koanf:"username"`
+	Org      string `koanf:"org"`
 	Token    string `koanf:"token"`
 }
 
