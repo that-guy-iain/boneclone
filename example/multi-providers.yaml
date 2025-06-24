@@ -10,7 +10,7 @@
    - provider: azure
      username: azure-devops-username
      org: "https://dev.azure.com/example/"
-     token: gitlab-token
+     token: azure-token
 files:
   include:
     - ci
