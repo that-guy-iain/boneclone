@@ -13,7 +13,7 @@ BoneClone allows you to keep multiple repositories in sync with a skeleton/templ
   
 ## How It Works
 
-![BoneClone Workflow](./docs/flow.png)
+![BoneClone Workflow](docs/repo-flow.png)
 
 ## Install
 
