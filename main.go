@@ -53,7 +53,7 @@ func runWithArgs(args []string) error {
 				}
 			}
 			if !k.Exists("git.targetBranch") {
-				if err := k.Set("git.targetBranch", ""); err != nil {
+				if err := k.Set("git.targetBranch", "main"); err != nil {
 					log.Fatalf("error setting default git.targetBranch: %v", err)
 				}
 			}
