@@ -110,7 +110,7 @@ func (a AzureRepositoryProvider) AssignReviewers(ctx context.Context, repo strin
 	repoName := parts[1]
 
 	// Define a narrow interface for the reviewers API to avoid widening our gitClient test seam.
- type prReviewerClient interface {
+	type prReviewerClient interface {
 		CreatePullRequestReviewers(context.Context, git.CreatePullRequestReviewersArgs) (*[]webapi.IdentityRef, error)
 	}
 
@@ -121,7 +121,7 @@ func (a AzureRepositoryProvider) AssignReviewers(ctx context.Context, repo strin
 	}
 
 	// Build identity refs using UniqueName to avoid a separate identity lookup.
-	var idents []webapi.IdentityRef
+	idents := make([]webapi.IdentityRef, 0, len(reviewers))
 	for _, r := range reviewers {
 		r = strings.TrimSpace(r)
 		if r == "" {
