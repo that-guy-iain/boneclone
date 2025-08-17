@@ -15,6 +15,16 @@ BoneClone allows you to keep multiple repositories in sync with a skeleton/templ
 
 ![BoneClone Workflow](docs/repo-flow.png)
 
+* You list the git hosting providers you use (GitHub, GitLab, Azure DevOps) and their credentials in a configuration file.
+* You list the files and directories you want to copy from your skeleton/template repository into each target repository.
+* You list the files you want excluded from the copy process.
+* You specify a file that must exist in each target repository, which BoneClone uses to determine if the repository accepts updates from your skeleton/template.
+* BoneClone then reads from each hosting provider's API to discover repositories
+* For each target repository, BoneClone:
+  - Checks for the identifier file to see if it accepts updates from your skeleton/template.
+  - Copies the specified files and directories into the target repository.
+  - Opens a pull request with the changes, optionally requesting reviewers defined in the target repository's identifier file.
+
 ## Install
 
 `go install go.iain.rocks/boneclone@latest`
