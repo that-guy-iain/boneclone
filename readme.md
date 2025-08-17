@@ -1,5 +1,6 @@
-BoneClone
-=========
+<p align="center">
+    <img src="boneclone.jpeg" alt="Boneclone" /> 
+</p>
 
 **CURRENTLY WORK IN PROGRESS**
 
