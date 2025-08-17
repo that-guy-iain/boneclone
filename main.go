@@ -46,6 +46,13 @@ func runWithArgs(args []string) error {
 				log.Fatalf("error expanding env in config: %v", err)
 			}
 
+			// Set defaults for missing config values
+			if !k.Exists("git.pullRequest") {
+				if err := k.Set("git.pullRequest", true); err != nil {
+					log.Fatalf("error setting default git.pullRequest: %v", err)
+				}
+			}
+
 			var config domain.Config
 			if err := k.Unmarshal("", &config); err != nil {
 				log.Fatalf("error unmarshalling config: %v", err)
