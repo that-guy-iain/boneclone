@@ -20,8 +20,6 @@ import (
 )
 
 const (
-	DefaultCommiterName   = "boneclone"
-	DefaultCommiterEmail  = "boneclone@example.org"
 	DefaultCommitterName  = "boneclone"
 	DefaultCommitterEmail = "boneclone@example.org"
 	GitDepth              = 1
@@ -95,6 +93,7 @@ func CopyFiles(
 	fs billy.Filesystem,
 	config domain.Config,
 	provider domain.ProviderConfig,
+	targetBranch string,
 ) error {
 	worktree, err := repo.Worktree()
 	if err != nil {
@@ -119,11 +118,11 @@ func CopyFiles(
 		// Determine author from config with defaults
 		name := config.Git.Name
 		if name == "" {
-			name = DefaultCommiterName
+			name = DefaultCommitterName
 		}
 		email := config.Git.Email
 		if email == "" {
-			email = DefaultCommiterEmail
+			email = DefaultCommitterEmail
 		}
 
 		_, err = worktree.Commit("Updated via boneclone", &git.CommitOptions{
@@ -140,7 +139,7 @@ func CopyFiles(
 		opts := &git.PushOptions{
 			Auth: &http.BasicAuth{Username: provider.Username, Password: provider.Token},
 		}
-		if tb := strings.TrimSpace(config.Git.TargetBranch); tb != "" {
+		if tb := strings.TrimSpace(targetBranch); tb != "" {
 			opts.RefSpecs = []gogitcfg.RefSpec{gogitcfg.RefSpec("HEAD:refs/heads/" + tb)}
 		}
 		err = repo.Push(opts)

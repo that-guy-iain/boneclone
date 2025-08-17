@@ -65,6 +65,19 @@ func runWithArgs(args []string) error {
 
 			// Wire infra git operations into domain processor to avoid package cycles
 			domain.UseGitOps(git.CloneGit, git.IsValidForBoneClone, git.CopyFiles)
+
+			// Wire PR creation adapter so PR processor can create pull requests
+			domain.UsePullRequestCreator(func(ctx context.Context, pp domain.ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
+				prov, err := repository_providers.NewProvider(pp)
+				if err != nil {
+					return err
+				}
+				if prMgr, ok := prov.(domain.PullRequestManager); ok {
+					return prMgr.CreatePullRequest(ctx, repo, baseBranch, headBranch, filesChanged, originalAuthor)
+				}
+				return fmt.Errorf("provider %s does not support pull requests", pp.Provider)
+			})
+
 			processor := domain.NewProcessorForConfig(config)
 			return domain.Run(cxt, config, repository_providers.NewProvider, processor)
 		},

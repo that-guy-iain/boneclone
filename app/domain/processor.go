@@ -11,14 +11,14 @@ import (
 var (
 	cloneGitFn            func(repo GitRepository, config ProviderConfig) (*gogit.Repository, billy.Filesystem, error)
 	isValidForBoneCloneFn func(repo *gogit.Repository, config Config) (bool, error)
-	copyFilesFn           func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error
+	copyFilesFn           func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig, targetBranch string) error
 )
 
 // UseGitOps configures the git operation functions used by Processor.
 func UseGitOps(
 	clone func(repo GitRepository, config ProviderConfig) (*gogit.Repository, billy.Filesystem, error),
 	validate func(repo *gogit.Repository, config Config) (bool, error),
-	copyFn func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error,
+	copyFn func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig, targetBranch string) error,
 ) {
 	cloneGitFn = clone
 	isValidForBoneCloneFn = validate
@@ -44,7 +44,8 @@ func (p *Processor) Process(repo GitRepository, pp ProviderConfig, config Config
 	}
 
 	if valid {
-		if err := copyFilesFn(gitRepo, fs, config, pp); err != nil {
+		tb := config.Git.TargetBranch
+		if err := copyFilesFn(gitRepo, fs, config, pp, tb); err != nil {
 			return fmt.Errorf("copy: %w", err)
 		}
 	}
