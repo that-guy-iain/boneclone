@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	DefaultCommiterName  = "boneclone"
-	DefaultCommiterEmail = "boneclone@example.org"
+	DefaultCommiterName   = "boneclone"
+	DefaultCommiterEmail  = "boneclone@example.org"
 	DefaultCommitterName  = "boneclone"
 	DefaultCommitterEmail = "boneclone@example.org"
 	GitDepth              = 1
