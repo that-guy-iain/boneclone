@@ -64,9 +64,6 @@ func runWithArgs(args []string) error {
 				log.Fatalf("error unmarshalling config: %v", err)
 			}
 
-			// Wire infra git operations into domain processor to avoid package cycles
-			domain.UseGitOps(git.CloneGit, git.IsValidForBoneClone, git.CopyFiles)
-
 			// Wire PR creation adapter so PR processor can create pull requests
 			domain.UsePullRequestCreator(func(ctx context.Context, pp domain.ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
 				prov, err := repository_providers.NewProvider(pp)
@@ -79,7 +76,8 @@ func runWithArgs(args []string) error {
 				return fmt.Errorf("provider %s does not support pull requests", pp.Provider)
 			})
 
-			processor := domain.NewProcessorForConfig(config)
+			ops := git.NewOperations()
+			processor := domain.NewProcessorForConfig(config, ops)
 			return domain.Run(cxt, config, repository_providers.NewProvider, processor)
 		},
 	}

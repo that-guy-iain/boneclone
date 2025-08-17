@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	billy "github.com/go-git/go-billy/v5"
+	gogit "github.com/go-git/go-git/v6"
 )
 
 const DefaultPRTitle = "BoneClone update"
@@ -35,6 +38,12 @@ func DefaultPRBodyBuilder(repo, baseBranch, headBranch string, filesChanged []st
 
 type PullRequestManager interface {
 	CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody PRBodyBuilder) error
+}
+
+type GitOperations interface {
+	CloneGit(repo GitRepository, config ProviderConfig) (*gogit.Repository, billy.Filesystem, error)
+	IsValidForBoneClone(repo *gogit.Repository, config Config) (bool, error)
+	CopyFiles(repo *gogit.Repository, fs billy.Filesystem, config Config, provider ProviderConfig, targetBranch string) error
 }
 
 type GitRepository struct {

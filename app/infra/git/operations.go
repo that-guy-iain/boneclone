@@ -25,7 +25,28 @@ const (
 	GitDepth              = 1
 )
 
-func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, billy.Filesystem, error) {
+// GitOperations defines the operations BoneClone needs for git interactions.
+// This enables testability and future swapping/mocking of git behavior.
+// NOTE: The canonical interface lives in the domain package. This duplicate
+// definition remains only for historical context and should not be referenced.
+type GitOperations interface {
+	CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, billy.Filesystem, error)
+	IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, error)
+	CopyFiles(repo *git.Repository, fs billy.Filesystem, config domain.Config, provider domain.ProviderConfig, targetBranch string) error
+}
+
+// Operations is the default implementation of git operations using go-git and memfs.
+type Operations struct{}
+
+// NewOperations creates a new default Operations implementation, returned as a domain.GitOperations.
+func NewOperations() domain.GitOperations { return &Operations{} }
+
+// DefaultOps is the package-level default used by the wrapper functions to
+// maintain backward compatibility with existing callers.
+var DefaultOps domain.GitOperations = NewOperations()
+
+// Method implementations
+func (o *Operations) CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, billy.Filesystem, error) {
 	fs := memfs.New()
 	auth := &http.BasicAuth{
 		Username: config.Username,
@@ -44,7 +65,7 @@ func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Rep
 	return r, fs, nil
 }
 
-func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, error) {
+func (o *Operations) IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, error) {
 	headRef, err := repo.Head()
 	if err != nil {
 		return false, err
@@ -88,7 +109,7 @@ func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, erro
 	return strings.Contains(contentStr, config.Identifier.Content), nil
 }
 
-func CopyFiles(
+func (o *Operations) CopyFiles(
 	repo *git.Repository,
 	fs billy.Filesystem,
 	config domain.Config,
@@ -152,6 +173,25 @@ func CopyFiles(
 	}
 
 	return nil
+}
+
+// Wrapper functions for backward compatibility with existing callers.
+func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, billy.Filesystem, error) {
+	return DefaultOps.CloneGit(repo, config)
+}
+
+func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, error) {
+	return DefaultOps.IsValidForBoneClone(repo, config)
+}
+
+func CopyFiles(
+	repo *git.Repository,
+	fs billy.Filesystem,
+	config domain.Config,
+	provider domain.ProviderConfig,
+	targetBranch string,
+) error {
+	return DefaultOps.CopyFiles(repo, fs, config, provider, targetBranch)
 }
 
 func writeAndStageFile(fs billy.Filesystem, worktree *git.Worktree, file string) error {

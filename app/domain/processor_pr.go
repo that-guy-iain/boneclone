@@ -15,24 +15,24 @@ func UsePullRequestCreator(f func(ctx context.Context, pp ProviderConfig, repo, 
 }
 
 // prProcessor implements the Pull Request flow: clone -> validate -> copy+commit -> create PR.
-type prProcessor struct{}
+type prProcessor struct{ ops GitOperations }
 
-func newPRProcessor() *prProcessor { return &prProcessor{} }
+func newPRProcessor(ops GitOperations) *prProcessor { return &prProcessor{ops: ops} }
 
 func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Config) error {
-	if cloneGitFn == nil || isValidForBoneCloneFn == nil || copyFilesFn == nil {
+	if p.ops == nil {
 		return fmt.Errorf("git ops not configured")
 	}
 	if prCreateFn == nil {
 		return fmt.Errorf("pull request creator not configured")
 	}
 
-	gitRepo, fs, err := cloneGitFn(repo, pp)
+	gitRepo, fs, err := p.ops.CloneGit(repo, pp)
 	if err != nil {
 		return fmt.Errorf("clone: %w", err)
 	}
 
-	valid, err := isValidForBoneCloneFn(gitRepo, config)
+	valid, err := p.ops.IsValidForBoneClone(gitRepo, config)
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
@@ -44,7 +44,7 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 	branchName := fmt.Sprintf("boneclone/update-%s", time.Now().UTC().Format("20060102-150405"))
 
 	// Copy files, commit, and push to the head branch
-	if err := copyFilesFn(gitRepo, fs, config, pp, branchName); err != nil {
+	if err := p.ops.CopyFiles(gitRepo, fs, config, pp, branchName); err != nil {
 		return fmt.Errorf("copy: %w", err)
 	}
 
