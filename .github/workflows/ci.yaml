@@ -25,3 +25,10 @@ jobs:
           go vet ./...
       - name: Test
         run: go test -race -v ./...
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v2.4.0
+        with:
+          # The action will automatically pick up .golangci.yml from the repo root
+          # You can customize flags if needed. Keeping defaults here.
+          version: latest
+          args: --timeout=5m
