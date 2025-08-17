@@ -22,7 +22,6 @@ var conf = koanf.Conf{
 var k = koanf.NewWithConf(conf)
 
 func runWithArgs(args []string) error {
-
 	cmd := &cli.Command{
 		Flags: []cli.Flag{
 			&cli.StringFlag{

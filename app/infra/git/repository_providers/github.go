@@ -2,9 +2,11 @@ package repository_providers
 
 import (
 	"context"
+
+	"github.com/google/go-github/v72/github"
+
 	"go.iain.rocks/boneclone/app/domain"
 )
-import "github.com/google/go-github/v72/github"
 
 type GithubRepositoryProvider struct {
 	github  *github.Client
@@ -13,7 +15,6 @@ type GithubRepositoryProvider struct {
 
 func (g GithubRepositoryProvider) GetRepositories() (*[]domain.GitRepository, error) {
 	repos, _, err := g.github.Repositories.ListByOrg(context.Background(), g.orgName, nil)
-
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +29,7 @@ func (g GithubRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 	return &output, nil
 }
 
-func NewGithubRepositoryProvider(token string, orgName string) (domain.GitRepositoryProvider, error) {
+func NewGithubRepositoryProvider(token, orgName string) (domain.GitRepositoryProvider, error) {
 	client := github.NewClient(nil).WithAuthToken(token)
 
 	return &GithubRepositoryProvider{client, orgName}, nil

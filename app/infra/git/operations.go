@@ -31,7 +31,6 @@ func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Rep
 		Auth:  auth,
 		Bare:  false,
 	})
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -40,13 +39,11 @@ func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Rep
 }
 
 func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, error) {
-
 	headRef, err := repo.Head()
 	if err != nil {
 		return false, err
 	}
 	headCommit, err := repo.CommitObject(headRef.Hash())
-
 	if err != nil {
 		return false, err
 	}
@@ -92,9 +89,7 @@ func CopyFiles(
 	config domain.FileConfig,
 	provider domain.ProviderConfig,
 ) error {
-
 	worktree, err := repo.Worktree()
-
 	if err != nil {
 		return err
 	}
@@ -102,7 +97,6 @@ func CopyFiles(
 	for _, definedFile := range config.Include {
 
 		files, err := getAllFilenames(definedFile)
-
 		if err != nil {
 			return err
 		}
@@ -117,10 +111,9 @@ func CopyFiles(
 			parts = parts[:len(parts)-1]
 			directory := strings.Join(parts, "/")
 			_, err := fs.Lstat(directory)
-
 			if err != nil {
 				if err == os.ErrNotExist {
-					err := fs.MkdirAll(directory, 0755)
+					err := fs.MkdirAll(directory, 0o755)
 					if err != nil {
 						return err
 					}
@@ -176,11 +169,9 @@ func isExcluded(filename string, excluded []string) bool {
 }
 
 func getAllFilenames(filename string) ([]string, error) {
-
 	output := []string{}
 
 	stat, err := os.Stat(filename)
-
 	if err != nil {
 		return []string{}, err
 	}

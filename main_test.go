@@ -9,7 +9,7 @@ import (
 )
 
 // writeTempConfig writes the provided YAML string to a temp file and returns its path.
-func writeTempConfig(t *testing.T, dir string, yaml string) string {
+func writeTempConfig(t *testing.T, dir, yaml string) string {
 	t.Helper()
 	p := filepath.Join(dir, ".boneclone.yaml")
 	if err := os.WriteFile(p, []byte(yaml), 0o600); err != nil {

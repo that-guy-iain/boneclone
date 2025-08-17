@@ -79,7 +79,7 @@ func (a AzureRepositoryProvider) GetRepositories() (*[]domain.GitRepository, err
 	return &output, nil
 }
 
-func NewAzureRepositoryProvider(token string, org string) (domain.GitRepositoryProvider, error) {
+func NewAzureRepositoryProvider(token, org string) (domain.GitRepositoryProvider, error) {
 	connection := azuredevops.NewPatConnection(org, token)
 	ctx := context.Background()
 

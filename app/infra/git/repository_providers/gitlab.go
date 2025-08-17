@@ -2,6 +2,7 @@ package repository_providers
 
 import (
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+
 	"go.iain.rocks/boneclone/app/domain"
 )
 
@@ -52,7 +53,7 @@ func (g GitlabRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 	return &output, nil
 }
 
-func NewGitlabRepositoryProvider(token string, org string) (domain.GitRepositoryProvider, error) {
+func NewGitlabRepositoryProvider(token, org string) (domain.GitRepositoryProvider, error) {
 	client, err := gitlab.NewClient(token)
 	if err != nil {
 		return nil, err

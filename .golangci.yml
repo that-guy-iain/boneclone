@@ -1,0 +1,67 @@
+version: "2"
+run:
+  tests: false
+  allow-parallel-runners: true
+linters:
+  enable:
+    - cyclop
+    - durationcheck
+    - errorlint
+    - goconst
+    - gocritic
+    - misspell
+    - prealloc
+    - revive
+    - unconvert
+  disable:
+    - depguard
+  settings:
+    cyclop:
+      max-complexity: 15
+    misspell:
+      locale: US
+    revive:
+      severity: warning
+      rules:
+        - name: blank-imports
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-naming
+        - name: if-return
+        - name: increment-decrement
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: time-naming
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - revive
+        path: ^LICENSE$
+        text: should have comment or be unexported
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      extra-rules: true
+    goimports:
+      local-prefixes:
+        - go.iain.rocks/boneclone
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
