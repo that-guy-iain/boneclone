@@ -67,8 +67,8 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 			return fmt.Errorf("create PR: %w", err)
 		}
 		// Attempt to assign reviewers from remote config; failures are ignored (silent)
-		for _, r := range remoteCfg.Reviewers {
-			_ = prMgr.AssignReviewers(context.Background(), repo.Name, pr, []string{r})
+		if len(remoteCfg.Reviewers) > 0 {
+			_ = prMgr.AssignReviewers(context.Background(), repo.Name, pr, remoteCfg.Reviewers)
 		}
 		return nil
 	}

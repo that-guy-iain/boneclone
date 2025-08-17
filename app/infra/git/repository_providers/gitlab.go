@@ -15,15 +15,21 @@ type gitlabGroupProjectLister interface {
 	ListGroupProjects(gid interface{}, opt *gitlab.ListGroupProjectsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Project, *gitlab.Response, error)
 }
 
-// Small interface for creating merge requests to enable testing without real client
-// Only the method used is included.
-type gitlabMergeRequestCreator interface {
+// Small interfaces for merge requests and users to enable testing without real client.
+// Only the methods used are included.
+type gitlabMergeRequestService interface {
 	CreateMergeRequest(pid interface{}, opt *gitlab.CreateMergeRequestOptions, options ...gitlab.RequestOptionFunc) (*gitlab.MergeRequest, *gitlab.Response, error)
+	UpdateMergeRequest(pid interface{}, mergeRequestIID int, opt *gitlab.UpdateMergeRequestOptions, options ...gitlab.RequestOptionFunc) (*gitlab.MergeRequest, *gitlab.Response, error)
+}
+
+type gitlabUserLister interface {
+	ListUsers(opt *gitlab.ListUsersOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.User, *gitlab.Response, error)
 }
 
 type GitlabRepositoryProvider struct {
 	groups gitlabGroupProjectLister
-	mrs    gitlabMergeRequestCreator
+	mrs    gitlabMergeRequestService
+	users  gitlabUserLister
 	org    string
 }
 
@@ -80,17 +86,47 @@ func (g GitlabRepositoryProvider) CreatePullRequest(ctx context.Context, repo, b
 	}
 
 	pid := fmt.Sprintf("%s/%s", g.org, repo)
-	mr, _, err := g.mrs.CreateMergeRequest(pid, opt)
+	mr, _, err := g.mrs.CreateMergeRequest(pid, opt, gitlab.WithContext(ctx))
 	if err != nil {
 		return domain.PRInfo{}, err
 	}
 	return domain.PRInfo{ID: mr.IID, URL: mr.WebURL}, nil
 }
 
-// AssignReviewers is currently a best-effort no-op due to lack of username->ID mapping in this package.
-// The processor treats assignment errors as non-fatal, so this returns nil.
+// AssignReviewers sets reviewers on an existing merge request by resolving usernames to user IDs.
+// Unknown reviewers are ignored; if none can be resolved, this is a no-op.
 func (g GitlabRepositoryProvider) AssignReviewers(ctx context.Context, repo string, pr domain.PRInfo, reviewers []string) error {
-	return nil
+	if len(reviewers) == 0 {
+		return nil
+	}
+	var ids []int
+	seen := map[int]struct{}{}
+	for _, uname := range reviewers {
+		if uname == "" {
+			continue
+		}
+		opt := &gitlab.ListUsersOptions{Username: &uname}
+		users, _, err := g.users.ListUsers(opt, gitlab.WithContext(ctx))
+		if err != nil {
+			return err
+		}
+		for _, u := range users {
+			if u != nil && u.Username == uname {
+				if _, ok := seen[u.ID]; !ok {
+					ids = append(ids, u.ID)
+					seen[u.ID] = struct{}{}
+				}
+				break
+			}
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	pid := fmt.Sprintf("%s/%s", g.org, repo)
+	opt := &gitlab.UpdateMergeRequestOptions{ReviewerIDs: &ids}
+	_, _, err := g.mrs.UpdateMergeRequest(pid, pr.ID, opt, gitlab.WithContext(ctx))
+	return err
 }
 
 func NewGitlabRepositoryProvider(token, org string) (domain.GitRepositoryProvider, error) {
@@ -98,5 +134,5 @@ func NewGitlabRepositoryProvider(token, org string) (domain.GitRepositoryProvide
 	if err != nil {
 		return nil, err
 	}
-	return &GitlabRepositoryProvider{groups: client.Groups, mrs: client.MergeRequests, org: org}, nil
+	return &GitlabRepositoryProvider{groups: client.Groups, mrs: client.MergeRequests, users: client.Users, org: org}, nil
 }
