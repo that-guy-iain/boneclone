@@ -1,8 +1,8 @@
 package repository_providers
 
 import (
-	"github.com/that-guy-iain/boneclone/app/domain"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"go.iain.rocks/boneclone/app/domain"
 )
 
 type GitlabRepositoryProvider struct {

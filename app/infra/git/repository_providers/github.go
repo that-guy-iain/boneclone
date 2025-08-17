@@ -2,7 +2,7 @@ package repository_providers
 
 import (
 	"context"
-	"github.com/that-guy-iain/boneclone/app/domain"
+	"go.iain.rocks/boneclone/app/domain"
 )
 import "github.com/google/go-github/v72/github"
 

@@ -2,18 +2,19 @@ package git
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/memory"
-	"time"
 
-	"github.com/go-git/go-billy/v5/memfs"
-	"github.com/that-guy-iain/boneclone/app/domain"
-	"io"
-	"os"
-	"strings"
+	"go.iain.rocks/boneclone/app/domain"
 )
 
 const GIT_DEPTH = 1

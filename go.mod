@@ -1,4 +1,4 @@
-module github.com/that-guy-iain/boneclone
+module go.iain.rocks/boneclone
 
 go 1.24
 

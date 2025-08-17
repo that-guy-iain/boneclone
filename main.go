@@ -3,10 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/that-guy-iain/boneclone/app/domain"
-	"github.com/that-guy-iain/boneclone/app/infra/git"
-	"github.com/that-guy-iain/boneclone/app/infra/git/repository_providers"
-	"github.com/urfave/cli/v3"
 	"log"
 	"os"
 	"sync"
@@ -14,6 +10,11 @@ import (
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
+	"github.com/urfave/cli/v3"
+	
+	"go.iain.rocks/boneclone/app/domain"
+	"go.iain.rocks/boneclone/app/infra/git"
+	"go.iain.rocks/boneclone/app/infra/git/repository_providers"
 )
 
 var conf = koanf.Conf{
@@ -28,7 +29,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
-				Value:   ".github.com/that-guy-iain/boneclone.yaml",
+				Value:   ".boneclone.yaml",
 				Usage:   "The config file to be used",
 				Aliases: []string{"c"},
 			},
@@ -93,5 +94,17 @@ func main() {
 
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
+	}
+}
+func expandEnvValues(k *koanf.Koanf) {
+	for _, key := range k.Keys() {
+		val := k.Get(key)
+
+		if strVal, ok := val.(string); ok {
+			expandedVal := os.ExpandEnv(strVal)
+			if expandedVal != strVal {
+				k.Set(key, expandedVal)
+			}
+		}
 	}
 }

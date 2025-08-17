@@ -5,7 +5,7 @@ import (
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/core"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
-	"github.com/that-guy-iain/boneclone/app/domain"
+	"go.iain.rocks/boneclone/app/domain"
 )
 
 type AzureRepositoryProvider struct {

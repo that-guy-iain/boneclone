@@ -2,7 +2,7 @@ package repository_providers
 
 import (
 	"fmt"
-	"github.com/that-guy-iain/boneclone/app/domain"
+	"go.iain.rocks/boneclone/app/domain"
 	"strings"
 )
 
