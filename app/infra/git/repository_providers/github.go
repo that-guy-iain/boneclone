@@ -31,7 +31,7 @@ func (g GithubRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 
 // CreatePullRequest creates a PR on the specified repository within the configured org.
 // The PR body is produced by the provided buildBody function.
-func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) error {
+func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) (domain.PRInfo, error) {
 	body := ""
 	if buildBody != nil {
 		body = buildBody(repo, baseBranch, headBranch, filesChanged, originalAuthor)
@@ -44,7 +44,24 @@ func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo, b
 		Body:  github.Ptr(body),
 	}
 
-	_, _, err := g.github.PullRequests.Create(ctx, g.orgName, repo, newPR)
+	pr, _, err := g.github.PullRequests.Create(ctx, g.orgName, repo, newPR)
+	if err != nil {
+		return domain.PRInfo{}, err
+	}
+	id := 0
+	if pr.Number != nil { id = *pr.Number }
+	url := ""
+	if pr.HTMLURL != nil { url = *pr.HTMLURL }
+	return domain.PRInfo{ID: id, URL: url}, nil
+}
+
+// AssignReviewers requests reviewers on an existing PR. Errors are returned to the caller to decide handling.
+func (g GithubRepositoryProvider) AssignReviewers(ctx context.Context, repo string, pr domain.PRInfo, reviewers []string) error {
+	if len(reviewers) == 0 {
+		return nil
+	}
+	req := github.ReviewersRequest{Reviewers: reviewers}
+	_, _, err := g.github.PullRequests.RequestReviewers(ctx, g.orgName, repo, pr.ID, req)
 	return err
 }
 

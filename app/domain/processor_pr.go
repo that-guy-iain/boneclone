@@ -27,7 +27,7 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 		return fmt.Errorf("clone: %w", err)
 	}
 
-	valid, _, err := p.ops.IsValidForBoneClone(gitRepo, config)
+	valid, remoteCfg, err := p.ops.IsValidForBoneClone(gitRepo, config)
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
@@ -60,8 +60,13 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 		return fmt.Errorf("create PR: %w", err)
 	}
 	if prMgr, ok := prov.(PullRequestManager); ok {
-		if err := prMgr.CreatePullRequest(context.Background(), repo.Name, base, branchName, prTitle, nil, "", DefaultPRBodyBuilder); err != nil {
+		pr, err := prMgr.CreatePullRequest(context.Background(), repo.Name, base, branchName, prTitle, nil, "", DefaultPRBodyBuilder)
+		if err != nil {
 			return fmt.Errorf("create PR: %w", err)
+		}
+		// Attempt to assign reviewers from remote config; failures are ignored (silent)
+		for _, r := range remoteCfg.Reviewers {
+			_ = prMgr.AssignReviewers(context.Background(), repo.Name, pr, []string{r})
 		}
 		return nil
 	}

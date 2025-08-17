@@ -66,7 +66,7 @@ func (g GitlabRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 // CreatePullRequest creates a merge request on GitLab for the given repo (within the configured org/group).
 // baseBranch is the target, headBranch is the source.
 // The merge request body is produced by the provided buildBody function.
-func (g GitlabRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) error {
+func (g GitlabRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) (domain.PRInfo, error) {
 	body := ""
 	if buildBody != nil {
 		body = buildBody(repo, baseBranch, headBranch, filesChanged, originalAuthor)
@@ -80,8 +80,17 @@ func (g GitlabRepositoryProvider) CreatePullRequest(ctx context.Context, repo, b
 	}
 
 	pid := fmt.Sprintf("%s/%s", g.org, repo)
-	_, _, err := g.mrs.CreateMergeRequest(pid, opt)
-	return err
+	mr, _, err := g.mrs.CreateMergeRequest(pid, opt)
+	if err != nil {
+		return domain.PRInfo{}, err
+	}
+	return domain.PRInfo{ID: mr.IID, URL: mr.WebURL}, nil
+}
+
+// AssignReviewers is currently a best-effort no-op due to lack of username->ID mapping in this package.
+// The processor treats assignment errors as non-fatal, so this returns nil.
+func (g GitlabRepositoryProvider) AssignReviewers(ctx context.Context, repo string, pr domain.PRInfo, reviewers []string) error {
+	return nil
 }
 
 func NewGitlabRepositoryProvider(token, org string) (domain.GitRepositoryProvider, error) {

@@ -36,16 +36,16 @@ type AzureRepositoryProvider struct {
 	ctx        context.Context
 }
 
-func (a AzureRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) error {
+func (a AzureRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) (domain.PRInfo, error) {
 	gc, err := newGitClient(ctx, a.connection)
 	if err != nil {
-		return err
+		return domain.PRInfo{}, err
 	}
 
 	// Expect repo in the form "Project/Repository"
 	parts := strings.SplitN(repo, "/", 2)
 	if len(parts) != 2 {
-		return fmt.Errorf("azure repo must be 'Project/Repository', got: %s", repo)
+		return domain.PRInfo{}, fmt.Errorf("azure repo must be 'Project/Repository', got: %s", repo)
 	}
 	project := parts[0]
 	repoName := parts[1]
@@ -71,8 +71,25 @@ func (a AzureRepositoryProvider) CreatePullRequest(ctx context.Context, repo, ba
 		RepositoryId:           &repoName,
 	}
 
-	_, err = gc.CreatePullRequest(ctx, args)
-	return err
+	created, err := gc.CreatePullRequest(ctx, args)
+	if err != nil {
+		return domain.PRInfo{}, err
+	}
+	id := 0
+	if created != nil && created.PullRequestId != nil {
+		id = *created.PullRequestId
+	}
+	url := ""
+	if created != nil && created.Url != nil {
+		url = *created.Url
+	}
+	return domain.PRInfo{ID: id, URL: url}, nil
+}
+
+// AssignReviewers is a best-effort no-op for Azure in this iteration.
+// Future improvement: wire git.CreatePullRequestReviewer(s) once user identity resolution is added.
+func (a AzureRepositoryProvider) AssignReviewers(ctx context.Context, repo string, pr domain.PRInfo, reviewers []string) error {
+	return nil
 }
 
 func (a AzureRepositoryProvider) GetRepositories() (*[]domain.GitRepository, error) {
