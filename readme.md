@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="boneclone.jpeg" alt="Boneclone" /> 
+    <img src="boneclone-logo.jpeg" alt="Boneclone" /> 
 </p>
 
 **CURRENTLY WORK IN PROGRESS**
