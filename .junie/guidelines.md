@@ -70,6 +70,7 @@ Testing
   - go test ./... -cover -coverprofile=coverage.out && go tool cover -html=coverage.out -o coverage.html
 
 Additional Development Information
+- All code must be ran through the linter and all errors fixed: golangci-lint run ./... 
 - Concurrency: main.go spins a goroutine per repository and uses a sync.WaitGroup to wait. There is currently no rate limiting or backoff for provider APIs or pushes; if you observe throttling, introduce a worker pool or limiter.
 - Error handling: main.go currently prints errors to stdout and continues; consider structured logging and per-repo error aggregation for large runs.
 - Provider factory: repository_providers.NewProvider selects by strings.ToLower(provider). Unknown providers return an error.
@@ -90,3 +91,4 @@ Quickstart
 
 Git Usage:
 - ALL CHANGES ARE TO BE STAGED TO GIT
+- DO NOT COMMIT DIRECTLY TO THE REPOSITORY

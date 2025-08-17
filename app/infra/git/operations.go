@@ -1,6 +1,7 @@
 package git
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -17,7 +18,13 @@ import (
 	"go.iain.rocks/boneclone/app/domain"
 )
 
-const GIT_DEPTH = 1
+const (
+	DefaultCommiterName   = "boneclone"
+	DefaultCommiterEmail  = "boneclone@example.org"
+	DefaultCommitterName  = "boneclone"
+	DefaultCommitterEmail = "boneclone@example.org"
+	GitDepth              = 1
+)
 
 func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, billy.Filesystem, error) {
 	fs := memfs.New()
@@ -27,7 +34,7 @@ func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Rep
 	}
 	r, err := git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
 		URL:   repo.Url,
-		Depth: GIT_DEPTH,
+		Depth: GitDepth,
 		Auth:  auth,
 		Bare:  false,
 	})
@@ -54,11 +61,10 @@ func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, erro
 
 	file, err := tree.File(config.Identifier.Filename)
 	if err != nil {
-		if err == object.ErrFileNotFound {
+		if errors.Is(err, object.ErrFileNotFound) {
 			return false, nil
-		} else {
-			return false, err
 		}
+		return false, err
 	}
 
 	// 6. Get the Blob object and read its content
@@ -71,7 +77,7 @@ func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, erro
 	if err != nil {
 		return false, err
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	// Maybe change to io.Copy
 	content, err := io.ReadAll(reader)
@@ -86,7 +92,7 @@ func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, erro
 func CopyFiles(
 	repo *git.Repository,
 	fs billy.Filesystem,
-	config domain.FileConfig,
+	config domain.Config,
 	provider domain.ProviderConfig,
 ) error {
 	worktree, err := repo.Worktree()
@@ -94,68 +100,88 @@ func CopyFiles(
 		return err
 	}
 
-	for _, definedFile := range config.Include {
-
+	for _, definedFile := range config.Files.Include {
 		files, err := getAllFilenames(definedFile)
 		if err != nil {
 			return err
 		}
 
 		for _, file := range files {
-
-			if isExcluded(file, config.Exclude) {
+			if isExcluded(file, config.Files.Exclude) {
 				continue
 			}
-
-			parts := strings.Split(file, "/")
-			parts = parts[:len(parts)-1]
-			directory := strings.Join(parts, "/")
-			_, err := fs.Lstat(directory)
-			if err != nil {
-				if err == os.ErrNotExist {
-					err := fs.MkdirAll(directory, 0o755)
-					if err != nil {
-						return err
-					}
-				} else {
-					return err
-				}
-			}
-
-			f, err := fs.Create(file)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-
-			content, err := os.ReadFile(file)
-			if err != nil {
-				return err
-			}
-			_, err = f.Write(content)
-			_, err = worktree.Add(file)
-			if err != nil {
+			if err := writeAndStageFile(fs, worktree, file); err != nil {
 				return err
 			}
 		}
+
+		// Determine author from config with defaults
+		name := config.Git.Name
+		if name == "" {
+			name = DefaultCommiterName
+		}
+		email := config.Git.Email
+		if email == "" {
+			email = DefaultCommiterEmail
+		}
+
 		_, err = worktree.Commit("Updated via boneclone", &git.CommitOptions{
 			Author: &object.Signature{
-				Name:  "boneclone",
-				Email: "boneclone@example.com",
+				Name:  name,
+				Email: email,
 				When:  time.Now(),
 			},
 		})
+		if err != nil {
+			return err
+		}
+
 		err = repo.Push(&git.PushOptions{
 			Auth: &http.BasicAuth{Username: provider.Username, Password: provider.Token},
 		})
 		if err != nil {
-			if err == git.NoErrAlreadyUpToDate {
+			if errors.Is(err, git.NoErrAlreadyUpToDate) {
 				return nil
 			}
 			return err
 		}
 	}
 
+	return nil
+}
+
+func writeAndStageFile(fs billy.Filesystem, worktree *git.Worktree, file string) error {
+	// Ensure directory exists
+	parts := strings.Split(file, "/")
+	if len(parts) > 1 {
+		dir := strings.Join(parts[:len(parts)-1], "/")
+		if _, err := fs.Lstat(dir); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				if err := fs.MkdirAll(dir, 0o755); err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+	}
+
+	f, err := fs.Create(file)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	content, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	if _, err = f.Write(content); err != nil {
+		return err
+	}
+	if _, err = worktree.Add(file); err != nil {
+		return err
+	}
 	return nil
 }
 

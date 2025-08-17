@@ -8,13 +8,14 @@ import (
 )
 
 func NewProvider(config domain.ProviderConfig) (domain.GitRepositoryProvider, error) {
-	if strings.ToLower(config.Provider) == "github" {
+	switch strings.ToLower(config.Provider) {
+	case "github":
 		return NewGithubRepositoryProvider(config.Token, config.Org)
-	} else if strings.ToLower(config.Provider) == "gitlab" {
+	case "gitlab":
 		return NewGitlabRepositoryProvider(config.Token, config.Org)
-	} else if strings.ToLower(config.Provider) == "azure" {
+	case "azure":
 		return NewAzureRepositoryProvider(config.Token, config.Org)
+	default:
+		return nil, fmt.Errorf("unknown provider: %s", config.Provider)
 	}
-
-	return nil, fmt.Errorf("unknown provider: %s", config.Provider)
 }

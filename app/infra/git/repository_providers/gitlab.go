@@ -27,7 +27,6 @@ func (g GitlabRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 		},
 	}
 
-	var output []domain.GitRepository
 	var allProjects []*gitlab.Project
 	for {
 		projects, resp, err := g.groups.ListGroupProjects(g.org, opts)
@@ -43,6 +42,7 @@ func (g GitlabRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 		opts.Page = resp.NextPage
 	}
 
+	output := make([]domain.GitRepository, 0, len(allProjects))
 	for _, project := range allProjects {
 		output = append(output, domain.GitRepository{
 			Name: project.Name,

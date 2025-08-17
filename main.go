@@ -41,6 +41,11 @@ func runWithArgs(args []string) error {
 				log.Fatalf("error loading config: %v", err)
 			}
 
+			// Expand environment variables in config values before unmarshalling
+			if err := expandEnvValues(k); err != nil {
+				log.Fatalf("error expanding env in config: %v", err)
+			}
+
 			var config domain.Config
 			if err := k.Unmarshal("", &config); err != nil {
 				log.Fatalf("error unmarshalling config: %v", err)
@@ -62,15 +67,18 @@ func main() {
 	}
 }
 
-func expandEnvValues(k *koanf.Koanf) {
+func expandEnvValues(k *koanf.Koanf) error {
 	for _, key := range k.Keys() {
 		val := k.Get(key)
 
 		if strVal, ok := val.(string); ok {
 			expandedVal := os.ExpandEnv(strVal)
 			if expandedVal != strVal {
-				k.Set(key, expandedVal)
+				if err := k.Set(key, expandedVal); err != nil {
+					return err
+				}
 			}
 		}
 	}
+	return nil
 }
