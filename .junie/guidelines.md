@@ -81,7 +81,7 @@ Additional Development Information
   - Introduce a git remote/push interface in operations.go so Push can be stubbed in tests.
   - Add an interface around GitHub client similar to GitLab/Azure patterns.
   - Wire expandEnvValues into config load for secrets via environment variables.
-  - All changes must be staged to git
+  - All changes MUST be staged to git
 
 Quickstart
 1) Build: go build -o boneclone .
