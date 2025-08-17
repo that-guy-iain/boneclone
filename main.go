@@ -47,7 +47,9 @@ func runWithArgs(args []string) error {
 				log.Fatalf("error unmarshalling config: %v", err)
 			}
 
-			processor := git.NewProcessor()
+			// Wire infra git operations into domain processor to avoid package cycles
+			domain.UseGitOps(git.CloneGit, git.IsValidForBoneClone, git.CopyFiles)
+			processor := domain.NewProcessor()
 			return domain.Run(cxt, config, repository_providers.NewProvider, processor)
 		},
 	}
