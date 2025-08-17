@@ -23,7 +23,7 @@ var conf = koanf.Conf{
 }
 var k = koanf.NewWithConf(conf)
 
-func main() {
+func runWithArgs(args []string) error {
 
 	cmd := &cli.Command{
 		Flags: []cli.Flag{
@@ -92,10 +92,15 @@ func main() {
 		},
 	}
 
-	if err := cmd.Run(context.Background(), os.Args); err != nil {
+	return cmd.Run(context.Background(), args)
+}
+
+func main() {
+	if err := runWithArgs(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }
+
 func expandEnvValues(k *koanf.Koanf) {
 	for _, key := range k.Keys() {
 		val := k.Get(key)

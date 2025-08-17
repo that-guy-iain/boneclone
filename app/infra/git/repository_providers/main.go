@@ -2,8 +2,9 @@ package repository_providers
 
 import (
 	"fmt"
-	"go.iain.rocks/boneclone/app/domain"
 	"strings"
+
+	"go.iain.rocks/boneclone/app/domain"
 )
 
 func NewProvider(config domain.ProviderConfig) (domain.GitRepositoryProvider, error) {
