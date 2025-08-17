@@ -122,33 +122,9 @@ func (o *Operations) CopyFiles(
 		return err
 	}
 
-	// Ensure we are on the target branch locally; create it if needed and base it on
-	// origin/<targetBranch> when available, otherwise on current HEAD.
-	tb := strings.TrimSpace(targetBranch)
-	if tb != "" {
-		// Compute reference names
-		tbRef := plumbing.NewBranchReferenceName(tb)
-		// Determine current HEAD to avoid redundant checkout
-		headRef, _ := repo.Head() // ignore error; if error occurs later checkout will fail accordingly
-		if headRef == nil || headRef.Name() != tbRef {
-			// Try to checkout existing local branch first
-			if err := worktree.Checkout(&git.CheckoutOptions{Branch: tbRef}); err != nil {
-				// Not present locally; attempt to create starting from remote/origin branch if available
-				var baseHash plumbing.Hash
-				if rref, rerr := repo.Reference(plumbing.NewRemoteReferenceName("origin", tb), true); rerr == nil {
-					baseHash = rref.Hash()
-				} else if headRef != nil {
-					baseHash = headRef.Hash()
-				}
-				co := &git.CheckoutOptions{Branch: tbRef, Create: true}
-				if baseHash != (plumbing.Hash{}) {
-					co.Hash = baseHash
-				}
-				if err := worktree.Checkout(co); err != nil {
-					return err
-				}
-			}
-		}
+	// Ensure we are operating on the desired target branch (if provided)
+	if err := ensureOnTargetBranch(repo, worktree, targetBranch); err != nil {
+		return err
 	}
 
 	for _, definedFile := range config.Files.Include {
@@ -166,40 +142,12 @@ func (o *Operations) CopyFiles(
 			}
 		}
 
-		// Determine author from config with defaults
-		name := config.Git.Name
-		if name == "" {
-			name = DefaultCommitterName
-		}
-		email := config.Git.Email
-		if email == "" {
-			email = DefaultCommitterEmail
-		}
-
-		_, err = worktree.Commit("Updated via boneclone", &git.CommitOptions{
-			Author: &object.Signature{
-				Name:  name,
-				Email: email,
-				When:  time.Now(),
-			},
-		})
+		upToDate, err := commitAndPush(repo, worktree, config, provider, targetBranch)
 		if err != nil {
 			return err
 		}
-
-		opts := &git.PushOptions{
-			Auth: &http.BasicAuth{Username: provider.Username, Password: provider.Token},
-		}
-		if tb := strings.TrimSpace(targetBranch); tb != "" {
-			localRef := "refs/heads/" + tb
-			opts.RefSpecs = []gogitcfg.RefSpec{gogitcfg.RefSpec(localRef + ":" + localRef)}
-		}
-		err = repo.Push(opts)
-		if err != nil {
-			if errors.Is(err, git.NoErrAlreadyUpToDate) {
-				return nil
-			}
-			return err
+		if upToDate {
+			return nil
 		}
 	}
 
@@ -267,6 +215,80 @@ func isExcluded(filename string, excluded []string) bool {
 		}
 	}
 	return false
+}
+
+// ensureOnTargetBranch ensures the worktree is on the provided target branch.
+// If the branch doesn't exist locally, it tries origin/<branch>, otherwise bases
+// the new branch on the current HEAD.
+func ensureOnTargetBranch(repo *git.Repository, worktree *git.Worktree, targetBranch string) error {
+	tb := strings.TrimSpace(targetBranch)
+	if tb == "" {
+		return nil
+	}
+
+	tbRef := plumbing.NewBranchReferenceName(tb)
+	// Attempt to detect current HEAD; if this fails we'll rely on checkout errors
+	headRef, _ := repo.Head()
+	if headRef != nil && headRef.Name() == tbRef {
+		return nil
+	}
+
+	// Try to checkout the branch if it already exists locally
+	if err := worktree.Checkout(&git.CheckoutOptions{Branch: tbRef}); err == nil {
+		return nil
+	}
+
+	// Create the branch, basing it off origin/<tb> when available, else current HEAD
+	var baseHash plumbing.Hash
+	if rref, rerr := repo.Reference(plumbing.NewRemoteReferenceName("origin", tb), true); rerr == nil {
+		baseHash = rref.Hash()
+	} else if headRef != nil {
+		baseHash = headRef.Hash()
+	}
+
+	co := &git.CheckoutOptions{Branch: tbRef, Create: true}
+	if baseHash != (plumbing.Hash{}) {
+		co.Hash = baseHash
+	}
+	return worktree.Checkout(co)
+}
+
+// commitAndPush creates a commit with configured author defaults and pushes it.
+// It returns alreadyUpToDate=true when the push indicates no changes.
+func commitAndPush(repo *git.Repository, worktree *git.Worktree, config domain.Config, provider domain.ProviderConfig, targetBranch string) (bool, error) {
+	name := config.Git.Name
+	if name == "" {
+		name = DefaultCommitterName
+	}
+	email := config.Git.Email
+	if email == "" {
+		email = DefaultCommitterEmail
+	}
+
+	if _, err := worktree.Commit("Updated via boneclone", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  name,
+			Email: email,
+			When:  time.Now(),
+		},
+	}); err != nil {
+		return false, err
+	}
+
+	opts := &git.PushOptions{
+		Auth: &http.BasicAuth{Username: provider.Username, Password: provider.Token},
+	}
+	if tb := strings.TrimSpace(targetBranch); tb != "" {
+		localRef := "refs/heads/" + tb
+		opts.RefSpecs = []gogitcfg.RefSpec{gogitcfg.RefSpec(localRef + ":" + localRef)}
+	}
+	if err := repo.Push(opts); err != nil {
+		if errors.Is(err, git.NoErrAlreadyUpToDate) {
+			return true, nil
+		}
+		return false, err
+	}
+	return false, nil
 }
 
 func getAllFilenames(filename string) ([]string, error) {
