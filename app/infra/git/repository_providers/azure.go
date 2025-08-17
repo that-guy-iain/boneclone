@@ -2,6 +2,8 @@ package repository_providers
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/core"
@@ -17,6 +19,7 @@ type coreClient interface {
 
 type gitClient interface {
 	GetRepositories(context.Context, git.GetRepositoriesArgs) (*[]git.GitRepository, error)
+	CreatePullRequest(context.Context, git.CreatePullRequestArgs) (*git.GitPullRequest, error)
 }
 
 // Constructors are variables so tests can stub them.
@@ -31,6 +34,45 @@ var newGitClient = func(ctx context.Context, conn *azuredevops.Connection) (gitC
 type AzureRepositoryProvider struct {
 	connection *azuredevops.Connection
 	ctx        context.Context
+}
+
+func (a AzureRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) error {
+	gc, err := newGitClient(ctx, a.connection)
+	if err != nil {
+		return err
+	}
+
+	// Expect repo in the form "Project/Repository"
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) != 2 {
+		return fmt.Errorf("azure repo must be 'Project/Repository', got: %s", repo)
+	}
+	project := parts[0]
+	repoName := parts[1]
+
+	sourceRef := "refs/heads/" + headBranch
+	targetRef := "refs/heads/" + baseBranch
+
+	body := ""
+	if buildBody != nil {
+		body = buildBody(repo, baseBranch, headBranch, filesChanged, originalAuthor)
+	}
+
+	pr := &git.GitPullRequest{
+		Title:         &title,
+		Description:   &body,
+		SourceRefName: &sourceRef,
+		TargetRefName: &targetRef,
+	}
+
+	args := git.CreatePullRequestArgs{
+		GitPullRequestToCreate: pr,
+		Project:                &project,
+		RepositoryId:           &repoName,
+	}
+
+	_, err = gc.CreatePullRequest(ctx, args)
+	return err
 }
 
 func (a AzureRepositoryProvider) GetRepositories() (*[]domain.GitRepository, error) {

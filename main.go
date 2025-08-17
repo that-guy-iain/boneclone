@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
@@ -46,14 +47,37 @@ func runWithArgs(args []string) error {
 				log.Fatalf("error expanding env in config: %v", err)
 			}
 
+			// Set defaults for missing config values
+			if !k.Exists("git.pullRequest") {
+				if err := k.Set("git.pullRequest", false); err != nil {
+					log.Fatalf("error setting default git.pullRequest: %v", err)
+				}
+			}
+			if !k.Exists("git.targetBranch") {
+				if err := k.Set("git.targetBranch", "main"); err != nil {
+					log.Fatalf("error setting default git.targetBranch: %v", err)
+				}
+			}
+
 			var config domain.Config
 			if err := k.Unmarshal("", &config); err != nil {
 				log.Fatalf("error unmarshalling config: %v", err)
 			}
 
-			// Wire infra git operations into domain processor to avoid package cycles
-			domain.UseGitOps(git.CloneGit, git.IsValidForBoneClone, git.CopyFiles)
-			processor := domain.NewProcessor()
+			// Wire PR creation adapter so PR processor can create pull requests
+			domain.UsePullRequestCreator(func(ctx context.Context, pp domain.ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
+				prov, err := repository_providers.NewProvider(pp)
+				if err != nil {
+					return err
+				}
+				if prMgr, ok := prov.(domain.PullRequestManager); ok {
+					return prMgr.CreatePullRequest(ctx, repo, baseBranch, headBranch, domain.DefaultPRTitle, filesChanged, originalAuthor, domain.DefaultPRBodyBuilder)
+				}
+				return fmt.Errorf("provider %s does not support pull requests", pp.Provider)
+			})
+
+			ops := git.NewOperations()
+			processor := domain.NewProcessorForConfig(config, ops)
 			return domain.Run(cxt, config, repository_providers.NewProvider, processor)
 		},
 	}

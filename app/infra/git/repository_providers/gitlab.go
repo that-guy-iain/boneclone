@@ -1,6 +1,9 @@
 package repository_providers
 
 import (
+	"context"
+	"fmt"
+
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 
 	"go.iain.rocks/boneclone/app/domain"
@@ -12,8 +15,15 @@ type gitlabGroupProjectLister interface {
 	ListGroupProjects(gid interface{}, opt *gitlab.ListGroupProjectsOptions, options ...gitlab.RequestOptionFunc) ([]*gitlab.Project, *gitlab.Response, error)
 }
 
+// Small interface for creating merge requests to enable testing without real client
+// Only the method used is included.
+type gitlabMergeRequestCreator interface {
+	CreateMergeRequest(pid interface{}, opt *gitlab.CreateMergeRequestOptions, options ...gitlab.RequestOptionFunc) (*gitlab.MergeRequest, *gitlab.Response, error)
+}
+
 type GitlabRepositoryProvider struct {
 	groups gitlabGroupProjectLister
+	mrs    gitlabMergeRequestCreator
 	org    string
 }
 
@@ -53,10 +63,31 @@ func (g GitlabRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 	return &output, nil
 }
 
+// CreatePullRequest creates a merge request on GitLab for the given repo (within the configured org/group).
+// baseBranch is the target, headBranch is the source.
+// The merge request body is produced by the provided buildBody function.
+func (g GitlabRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) error {
+	body := ""
+	if buildBody != nil {
+		body = buildBody(repo, baseBranch, headBranch, filesChanged, originalAuthor)
+	}
+
+	opt := &gitlab.CreateMergeRequestOptions{
+		Title:        &title,
+		SourceBranch: &headBranch,
+		TargetBranch: &baseBranch,
+		Description:  &body,
+	}
+
+	pid := fmt.Sprintf("%s/%s", g.org, repo)
+	_, _, err := g.mrs.CreateMergeRequest(pid, opt)
+	return err
+}
+
 func NewGitlabRepositoryProvider(token, org string) (domain.GitRepositoryProvider, error) {
 	client, err := gitlab.NewClient(token)
 	if err != nil {
 		return nil, err
 	}
-	return &GitlabRepositoryProvider{groups: client.Groups, org: org}, nil
+	return &GitlabRepositoryProvider{groups: client.Groups, mrs: client.MergeRequests, org: org}, nil
 }

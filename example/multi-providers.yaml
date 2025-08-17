@@ -19,3 +19,7 @@ files:
 identifier:
    filename: .boneclone
    content: golang
+
+git:
+  pullRequest: true
+  targetBranch: main
