@@ -7,7 +7,7 @@ type GitRepositoryProvider interface {
 }
 
 type PullRequestManager interface {
-	CreatePullRequest(ctx context.Context, repo string, baseBranch string, headBranch string, filesChanged []string, originalAuthor string) error
+	CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error
 }
 
 type GitRepository struct {

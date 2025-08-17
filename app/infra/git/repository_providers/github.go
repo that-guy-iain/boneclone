@@ -33,7 +33,7 @@ func (g GithubRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 
 // CreatePullRequest creates a PR on the specified repository within the configured org.
 // The PR body indicates it's a BoneClone PR, lists changed files, and records the original author.
-func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo string, baseBranch string, headBranch string, filesChanged []string, originalAuthor string) error {
+func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
 	title := "BoneClone update"
 	var bodyBuilder strings.Builder
 	bodyBuilder.WriteString("This is a BoneClone PR.\n\n")
@@ -51,10 +51,10 @@ func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo st
 	body := bodyBuilder.String()
 
 	newPR := &github.NewPullRequest{
-		Title: github.String(title),
-		Head:  github.String(headBranch),
-		Base:  github.String(baseBranch),
-		Body:  github.String(body),
+		Title: github.Ptr(title),
+		Head:  github.Ptr(headBranch),
+		Base:  github.Ptr(baseBranch),
+		Body:  github.Ptr(body),
 	}
 
 	_, _, err := g.github.PullRequests.Create(ctx, g.orgName, repo, newPR)

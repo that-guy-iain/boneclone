@@ -25,7 +25,7 @@ type IdentifierConfig struct {
 }
 
 type GitConfig struct {
-	Name         string `koanf:"name"`
-	Email        string `koanf:"email"`
-	PullRequest  bool   `koanf:"pullRequest"`
+	Name        string `koanf:"name"`
+	Email       string `koanf:"email"`
+	PullRequest bool   `koanf:"pullRequest"`
 }
