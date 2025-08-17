@@ -64,7 +64,7 @@ func runWithArgs(args []string) error {
 			}
 
 			// Configure skeleton name for PR messages (used in PR body)
-			domain.SetSkeletonName(config.Name)
+			domain.SetSkeletonName(config.Identifier.Name)
 
 			ops := git.NewOperations()
 			processor := domain.NewProcessorForConfig(config, ops, repository_providers.NewProvider)

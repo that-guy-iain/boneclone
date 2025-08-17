@@ -1,4 +1,3 @@
-name: "Skeleton Template"
 providers:
   - provider: github
     username: that-guy-iain
@@ -19,7 +18,7 @@ files:
     - ci/mocks.sh
 identifier:
   filename: .boneclone
-  content: golang
+  name: "Skeleton Template"
 
 git:
   pullRequest: true

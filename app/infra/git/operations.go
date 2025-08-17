@@ -119,7 +119,7 @@ func (o *Operations) IsValidForBoneClone(repo *git.Repository, config domain.Con
 		return false, domain.RemoteConfig{}, nil
 	}
 
-	skel := strings.TrimSpace(config.Name)
+	skel := strings.TrimSpace(config.Identifier.Name)
 	if skel == "" {
 		return false, rCfg, nil
 	}

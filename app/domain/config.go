@@ -1,7 +1,6 @@
 package domain
 
 type Config struct {
-	Name       string          `koanf:"name"`
 	Providers  []ProviderConfig `koanf:"providers"`
 	Files      FileConfig       `koanf:"files"`
 	Identifier IdentifierConfig `koanf:"identifier"`
@@ -22,7 +21,7 @@ type FileConfig struct {
 
 type IdentifierConfig struct {
 	Filename string `koanf:"filename"`
-	Content  string `koanf:"content"`
+	Name     string `koanf:"name"`
 }
 
 type GitConfig struct {

@@ -51,7 +51,7 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 
 	// Build PR title (use configured name when present)
 	prTitle := DefaultPRTitle
-	if name := config.Name; name != "" {
+	if name := config.Identifier.Name; name != "" {
 		prTitle = fmt.Sprintf("%s update", name)
 	}
 
