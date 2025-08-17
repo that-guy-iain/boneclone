@@ -1,24 +1,25 @@
- providers:
-   - provider: github
-     username: that-guy-iain
-     org: billabear
-     token: fake-token
-   - provider: gitlab
-     username: bb-iain
-     org: name
-     token: gitlab-token
-   - provider: azure
-     username: azure-devops-username
-     org: "https://dev.azure.com/example/"
-     token: azure-token
+name: "Skeleton Template"
+providers:
+  - provider: github
+    username: that-guy-iain
+    org: billabear
+    token: fake-token
+  - provider: gitlab
+    username: bb-iain
+    org: name
+    token: gitlab-token
+  - provider: azure
+    username: azure-devops-username
+    org: "https://dev.azure.com/example/"
+    token: azure-token
 files:
   include:
     - ci
   exclude:
     - ci/mocks.sh
 identifier:
-   filename: .boneclone
-   content: golang
+  filename: .boneclone
+  content: golang
 
 git:
   pullRequest: true

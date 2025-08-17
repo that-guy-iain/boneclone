@@ -53,6 +53,7 @@ Testing
   - operations.CopyFiles: for each include path, it collects files recursively (getAllFilenames), filters via isExcluded (exact string match), writes file content from the local workspace into memfs, stages, commits ("Updated via boneclone"), then pushes with BasicAuth. It returns early with nil if push reports go-git.NoErrAlreadyUpToDate.
   - Avoid invoking CopyFiles in unit tests unless you stub push. There is no seam for Push yet; if you need to unit test, consider extracting Push into an overridable function or checking Worktree state pre-push.
 - Adding new tests:
+  - Do not do indirection, instead create an interface for the specific functionality you want to test. For example, if you want to test a GitHub client, create a small interface that only includes the methods you need (e.g., Repositories.ListByOrg) and use that in your tests.
   - Prefer small interfaces over concrete SDK clients to enable fakes (pattern used by GitLab and Azure providers).
   - Keep tests hermetic by using t.TempDir for any filesystem interactions. For helpers like getAllFilenames and isExcluded, follow operations_test.go patterns.
   - Example (validated locally):

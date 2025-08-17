@@ -11,6 +11,17 @@ import (
 
 const DefaultPRTitle = "BoneClone update"
 
+// skeletonName holds the configured skeleton name for PR messages; defaults to "BoneClone" for backward compatibility.
+var skeletonName = "BoneClone"
+
+// SetSkeletonName sets the name used in PR titles/bodies when building default messages.
+func SetSkeletonName(name string) {
+	name = strings.TrimSpace(name)
+	if name != "" {
+		skeletonName = name
+	}
+}
+
 type GitRepositoryProvider interface {
 	GetRepositories() (*[]GitRepository, error)
 }
@@ -18,10 +29,11 @@ type GitRepositoryProvider interface {
 // PRBodyBuilder builds the body/description for a pull request given context about the change.
 type PRBodyBuilder func(repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) string
 
-// DefaultPRBodyBuilder reproduces the previous PR body format used across providers.
+// DefaultPRBodyBuilder reproduces the previous PR body format used across providers,
+// but uses the configured skeletonName for the intro line.
 func DefaultPRBodyBuilder(repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) string {
 	var b strings.Builder
-	b.WriteString("This is a BoneClone PR.\n\n")
+	b.WriteString(fmt.Sprintf("This is a %s PR.\n\n", skeletonName))
 	if originalAuthor != "" {
 		b.WriteString(fmt.Sprintf("Original author: %s\n\n", originalAuthor))
 	}

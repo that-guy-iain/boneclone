@@ -34,11 +34,28 @@ func (f *fakeOpsPR) CopyFiles(repo *gogit.Repository, fs billy.Filesystem, cfg C
 	return f.copyErr
 }
 
+// fake PR provider/manager implements both discovery and PR creation interfaces.
+type fakePRProviderManager struct {
+	called      bool
+	repo        string
+	base        string
+	head        string
+}
+
+func (f *fakePRProviderManager) GetRepositories() (*[]GitRepository, error) { return &[]GitRepository{}, nil }
+
+func (f *fakePRProviderManager) CreatePullRequest(_ context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody PRBodyBuilder) error {
+	f.called = true
+	f.repo = repo
+	f.base = baseBranch
+	f.head = headBranch
+	return nil
+}
+
 func TestPRProcessor_ErrWhenOpsNil(t *testing.T) {
-	p := newPRProcessor(nil)
-	// Ensure pr creator is set so we fail specifically on ops nil
-	UsePullRequestCreator(func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error { return nil })
-	t.Cleanup(func() { UsePullRequestCreator(nil) })
+	fakeProv := &fakePRProviderManager{}
+	pf := func(pp ProviderConfig) (GitRepositoryProvider, error) { return fakeProv, nil }
+	p := newPRProcessor(nil, pf)
 
 	repo := GitRepository{Name: "repo1"}
 	pp := ProviderConfig{}
@@ -49,51 +66,43 @@ func TestPRProcessor_ErrWhenOpsNil(t *testing.T) {
 	}
 }
 
-func TestPRProcessor_ErrWhenPRCreatorNil(t *testing.T) {
+func TestPRProcessor_ErrWhenProviderFactoryNil(t *testing.T) {
 	ops := &fakeOpsPR{}
-	p := newPRProcessor(ops)
-	// Explicitly unset PR creator
-	UsePullRequestCreator(nil)
-	t.Cleanup(func() { UsePullRequestCreator(nil) })
+	p := newPRProcessor(ops, nil)
 
 	repo := GitRepository{Name: "r"}
 	pp := ProviderConfig{}
 	cfg := Config{}
 
-	if err := p.Process(repo, pp, cfg); err == nil || !strings.Contains(err.Error(), "pull request creator not configured") {
-		t.Fatalf("expected pr creator not configured error, got %v", err)
+	if err := p.Process(repo, pp, cfg); err == nil || !strings.Contains(err.Error(), "provider factory not configured") {
+		t.Fatalf("expected provider factory not configured error, got %v", err)
 	}
 }
 
 func TestPRProcessor_CloneAndValidateErrors(t *testing.T) {
+	fakeProv := &fakePRProviderManager{}
+	pf := func(pp ProviderConfig) (GitRepositoryProvider, error) { return fakeProv, nil }
+
 	// Clone error
 	ops := &fakeOpsPR{cloneErr: errors.New("boom")}
-	p := newPRProcessor(ops)
-	UsePullRequestCreator(func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error { return nil })
-	t.Cleanup(func() { UsePullRequestCreator(nil) })
-
+	p := newPRProcessor(ops, pf)
 	if err := p.Process(GitRepository{Name: "r"}, ProviderConfig{}, Config{}); err == nil || err.Error() != "clone: boom" {
 		t.Fatalf("expected clone error wrapping, got %v", err)
 	}
 
 	// Validate error
 	ops = &fakeOpsPR{validErr: errors.New("valerr")}
-	p = newPRProcessor(ops)
-	UsePullRequestCreator(func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error { return nil })
+	p = newPRProcessor(ops, pf)
 	if err := p.Process(GitRepository{Name: "r"}, ProviderConfig{}, Config{}); err == nil || err.Error() != "validate: valerr" {
 		t.Fatalf("expected validate error wrapping, got %v", err)
 	}
 }
 
 func TestPRProcessor_NotValid_SkipsCopyAndPR(t *testing.T) {
+	fakeProv := &fakePRProviderManager{}
+	pf := func(pp ProviderConfig) (GitRepositoryProvider, error) { return fakeProv, nil }
 	ops := &fakeOpsPR{valid: false}
-	p := newPRProcessor(ops)
-	prCalled := false
-	UsePullRequestCreator(func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
-		prCalled = true
-		return nil
-	})
-	t.Cleanup(func() { UsePullRequestCreator(nil) })
+	p := newPRProcessor(ops, pf)
 
 	if err := p.Process(GitRepository{Name: "r"}, ProviderConfig{}, Config{}); err != nil {
 		t.Fatalf("expected nil error, got %v", err)
@@ -101,34 +110,30 @@ func TestPRProcessor_NotValid_SkipsCopyAndPR(t *testing.T) {
 	if ops.copyCalled {
 		t.Fatalf("expected CopyFiles not to be called when not valid")
 	}
-	if prCalled {
-		t.Fatalf("expected PR creator not to be called when not valid")
+	if fakeProv.called {
+		t.Fatalf("expected PR creation not to be called when not valid")
 	}
 }
 
 func TestPRProcessor_CopyError(t *testing.T) {
+	fakeProv := &fakePRProviderManager{}
+	pf := func(pp ProviderConfig) (GitRepositoryProvider, error) { return fakeProv, nil }
 	ops := &fakeOpsPR{valid: true, copyErr: errors.New("cperr")}
-	p := newPRProcessor(ops)
-	UsePullRequestCreator(func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error { return nil })
-	t.Cleanup(func() { UsePullRequestCreator(nil) })
+	p := newPRProcessor(ops, pf)
 
 	if err := p.Process(GitRepository{Name: "r"}, ProviderConfig{}, Config{}); err == nil || err.Error() != "copy: cperr" {
 		t.Fatalf("expected copy error wrapping, got %v", err)
 	}
+	if fakeProv.called {
+		t.Fatalf("expected PR creation not to be called on copy error")
+	}
 }
 
 func TestPRProcessor_Success_UsesTargetBranch_AndCallsPRCreator(t *testing.T) {
+	fakeProv := &fakePRProviderManager{}
+	pf := func(pp ProviderConfig) (GitRepositoryProvider, error) { return fakeProv, nil }
 	ops := &fakeOpsPR{valid: true}
-	p := newPRProcessor(ops)
-
-	called := false
-	var gotRepo, gotBase, gotHead string
-	UsePullRequestCreator(func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
-		called = true
-		gotRepo, gotBase, gotHead = repo, baseBranch, headBranch
-		return nil
-	})
-	t.Cleanup(func() { UsePullRequestCreator(nil) })
+	p := newPRProcessor(ops, pf)
 
 	repo := GitRepository{Name: "my-repo"}
 	cfg := Config{Git: GitConfig{TargetBranch: "develop"}}
@@ -142,35 +147,30 @@ func TestPRProcessor_Success_UsesTargetBranch_AndCallsPRCreator(t *testing.T) {
 	if !strings.HasPrefix(ops.lastBranch, "boneclone/update-") {
 		t.Fatalf("expected branch to start with boneclone/update-, got %q", ops.lastBranch)
 	}
-	if !called {
+	if !fakeProv.called {
 		t.Fatalf("expected PR creator to be called")
 	}
-	if gotRepo != repo.Name {
-		t.Fatalf("expected repo name %q, got %q", repo.Name, gotRepo)
+	if fakeProv.repo != repo.Name {
+		t.Fatalf("expected repo name %q, got %q", repo.Name, fakeProv.repo)
 	}
-	if gotBase != "develop" {
-		t.Fatalf("expected base branch 'develop', got %q", gotBase)
+	if fakeProv.base != "develop" {
+		t.Fatalf("expected base branch 'develop', got %q", fakeProv.base)
 	}
-	if gotHead != ops.lastBranch {
-		t.Fatalf("expected head branch %q to match CopyFiles branch %q", gotHead, ops.lastBranch)
+	if fakeProv.head != ops.lastBranch {
+		t.Fatalf("expected head branch %q to match CopyFiles branch %q", fakeProv.head, ops.lastBranch)
 	}
 }
 
 func TestPRProcessor_Success_DefaultsBaseToMain(t *testing.T) {
+	fakeProv := &fakePRProviderManager{}
+	pf := func(pp ProviderConfig) (GitRepositoryProvider, error) { return fakeProv, nil }
 	ops := &fakeOpsPR{valid: true}
-	p := newPRProcessor(ops)
-
-	var gotBase string
-	UsePullRequestCreator(func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
-		gotBase = baseBranch
-		return nil
-	})
-	t.Cleanup(func() { UsePullRequestCreator(nil) })
+	p := newPRProcessor(ops, pf)
 
 	if err := p.Process(GitRepository{Name: "r"}, ProviderConfig{}, Config{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if gotBase != "main" {
-		t.Fatalf("expected default base 'main', got %q", gotBase)
+	if fakeProv.base != "main" {
+		t.Fatalf("expected default base 'main', got %q", fakeProv.base)
 	}
 }

@@ -1,6 +1,7 @@
 package domain
 
 type Config struct {
+	Name       string          `koanf:"name"`
 	Providers  []ProviderConfig `koanf:"providers"`
 	Files      FileConfig       `koanf:"files"`
 	Identifier IdentifierConfig `koanf:"identifier"`

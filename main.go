@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
@@ -64,20 +63,11 @@ func runWithArgs(args []string) error {
 				log.Fatalf("error unmarshalling config: %v", err)
 			}
 
-			// Wire PR creation adapter so PR processor can create pull requests
-			domain.UsePullRequestCreator(func(ctx context.Context, pp domain.ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
-				prov, err := repository_providers.NewProvider(pp)
-				if err != nil {
-					return err
-				}
-				if prMgr, ok := prov.(domain.PullRequestManager); ok {
-					return prMgr.CreatePullRequest(ctx, repo, baseBranch, headBranch, domain.DefaultPRTitle, filesChanged, originalAuthor, domain.DefaultPRBodyBuilder)
-				}
-				return fmt.Errorf("provider %s does not support pull requests", pp.Provider)
-			})
+			// Configure skeleton name for PR messages (used in PR body)
+			domain.SetSkeletonName(config.Name)
 
 			ops := git.NewOperations()
-			processor := domain.NewProcessorForConfig(config, ops)
+			processor := domain.NewProcessorForConfig(config, ops, repository_providers.NewProvider)
 			return domain.Run(cxt, config, repository_providers.NewProvider, processor)
 		},
 	}

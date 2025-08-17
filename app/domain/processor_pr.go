@@ -6,25 +6,20 @@ import (
 	"time"
 )
 
-// Function indirection for PR creation to keep tests hermetic.
-var prCreateFn func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error
-
-// UsePullRequestCreator configures how PRs are created by the PR processor.
-func UsePullRequestCreator(f func(ctx context.Context, pp ProviderConfig, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error) {
-	prCreateFn = f
+// prProcessor implements the Pull Request flow: clone -> validate -> copy+commit -> create PR.
+type prProcessor struct{
+	ops         GitOperations
+	newProvider ProviderFactory
 }
 
-// prProcessor implements the Pull Request flow: clone -> validate -> copy+commit -> create PR.
-type prProcessor struct{ ops GitOperations }
-
-func newPRProcessor(ops GitOperations) *prProcessor { return &prProcessor{ops: ops} }
+func newPRProcessor(ops GitOperations, pf ProviderFactory) *prProcessor { return &prProcessor{ops: ops, newProvider: pf} }
 
 func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Config) error {
 	if p.ops == nil {
 		return fmt.Errorf("git ops not configured")
 	}
-	if prCreateFn == nil {
-		return fmt.Errorf("pull request creator not configured")
+	if p.newProvider == nil {
+		return fmt.Errorf("provider factory not configured")
 	}
 
 	gitRepo, fs, err := p.ops.CloneGit(repo, pp)
@@ -53,8 +48,23 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 	if base == "" {
 		base = "main"
 	}
-	if err := prCreateFn(context.Background(), pp, repo.Name, base, branchName, nil, ""); err != nil {
+
+	// Build PR title (use configured name when present)
+	prTitle := DefaultPRTitle
+	if name := config.Name; name != "" {
+		prTitle = fmt.Sprintf("%s update", name)
+	}
+
+	prov, err := p.newProvider(pp)
+	if err != nil {
 		return fmt.Errorf("create PR: %w", err)
 	}
-	return nil
+	if prMgr, ok := prov.(PullRequestManager); ok {
+		if err := prMgr.CreatePullRequest(context.Background(), repo.Name, base, branchName, prTitle, nil, "", DefaultPRBodyBuilder); err != nil {
+			return fmt.Errorf("create PR: %w", err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("provider %s does not support pull requests", pp.Provider)
 }
