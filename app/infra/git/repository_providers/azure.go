@@ -8,6 +8,7 @@ import (
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/core"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
+	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/webapi"
 
 	"go.iain.rocks/boneclone/app/domain"
 )
@@ -86,10 +87,60 @@ func (a AzureRepositoryProvider) CreatePullRequest(ctx context.Context, repo, ba
 	return domain.PRInfo{ID: id, URL: url}, nil
 }
 
-// AssignReviewers is a best-effort no-op for Azure in this iteration.
-// Future improvement: wire git.CreatePullRequestReviewer(s) once user identity resolution is added.
+// AssignReviewers attempts to add reviewers to an Azure DevOps pull request.
+// Reviewers are provided as unique names (e.g., email/UPN); unknown reviewers are ignored by the API.
+// If the underlying git client doesn't expose the batch reviewers API (in tests), this is a no-op.
 func (a AzureRepositoryProvider) AssignReviewers(ctx context.Context, repo string, pr domain.PRInfo, reviewers []string) error {
-	return nil
+	if len(reviewers) == 0 {
+		return nil
+	}
+
+	gc, err := newGitClient(ctx, a.connection)
+	if err != nil {
+		return err
+	}
+
+	// Expect repo in the form "Project/Repository" to resolve project and repo names.
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) != 2 {
+		// Keep behavior lenient: do not fail the whole flow; return nil to be consistent with best-effort semantics.
+		return nil
+	}
+	project := parts[0]
+	repoName := parts[1]
+
+	// Define a narrow interface for the reviewers API to avoid widening our gitClient test seam.
+ type prReviewerClient interface {
+		CreatePullRequestReviewers(context.Context, git.CreatePullRequestReviewersArgs) (*[]webapi.IdentityRef, error)
+	}
+
+	rc, ok := gc.(prReviewerClient)
+	if !ok {
+		// In tests fakes may not implement reviewers API; treat as no-op.
+		return nil
+	}
+
+	// Build identity refs using UniqueName to avoid a separate identity lookup.
+	var idents []webapi.IdentityRef
+	for _, r := range reviewers {
+		r = strings.TrimSpace(r)
+		if r == "" {
+			continue
+		}
+		idents = append(idents, webapi.IdentityRef{UniqueName: &r})
+	}
+	if len(idents) == 0 {
+		return nil
+	}
+
+	args := git.CreatePullRequestReviewersArgs{
+		Reviewers:     &idents,
+		Project:       &project,
+		RepositoryId:  &repoName,
+		PullRequestId: &pr.ID,
+	}
+	_, err = rc.CreatePullRequestReviewers(ctx, args)
+	return err
 }
 
 func (a AzureRepositoryProvider) GetRepositories() (*[]domain.GitRepository, error) {
