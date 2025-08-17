@@ -3,7 +3,6 @@ package repository_providers
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 
@@ -66,22 +65,12 @@ func (g GitlabRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 
 // CreatePullRequest creates a merge request on GitLab for the given repo (within the configured org/group).
 // baseBranch is the target, headBranch is the source.
-func (g GitlabRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
-	title := "BoneClone update"
-	var bodyBuilder strings.Builder
-	bodyBuilder.WriteString("This is a BoneClone PR.\n\n")
-	if originalAuthor != "" {
-		bodyBuilder.WriteString(fmt.Sprintf("Original author: %s\n\n", originalAuthor))
+// The merge request body is produced by the provided buildBody function.
+func (g GitlabRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) error {
+	body := ""
+	if buildBody != nil {
+		body = buildBody(repo, baseBranch, headBranch, filesChanged, originalAuthor)
 	}
-	if len(filesChanged) > 0 {
-		bodyBuilder.WriteString("Files changed:\n")
-		for _, f := range filesChanged {
-			bodyBuilder.WriteString("- ")
-			bodyBuilder.WriteString(f)
-			bodyBuilder.WriteString("\n")
-		}
-	}
-	body := bodyBuilder.String()
 
 	opt := &gitlab.CreateMergeRequestOptions{
 		Title:        &title,

@@ -131,7 +131,7 @@ func TestProcessor_Process_CopyError(t *testing.T) {
 			return nil, nil, nil
 		}
 		isValidForBoneCloneFn = func(repo *gogit.Repository, config Config) (bool, error) { return true, nil }
-		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error {
+		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig, targetBranch string) error {
 			return errors.New("cperr")
 		}
 

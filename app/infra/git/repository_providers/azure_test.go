@@ -186,7 +186,7 @@ func TestAzureProvider_CreatePullRequest_BuildsArgs(t *testing.T) {
 	provider := &AzureRepositoryProvider{connection: nil, ctx: context.Background()}
 	files := []string{"dir/a.txt", "b.md"}
 	author := "Alice"
-	err := provider.CreatePullRequest(context.Background(), "ProjX/RepoY", "main", "boneclone/update", files, author)
+	err := provider.CreatePullRequest(context.Background(), "ProjX/RepoY", "main", "boneclone/update", domain.DefaultPRTitle, files, author, domain.DefaultPRBodyBuilder)
 	if err != nil {
 		t.Fatalf("CreatePullRequest unexpected error: %v", err)
 	}

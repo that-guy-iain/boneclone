@@ -14,7 +14,7 @@ func TestNewProcessorForConfig_SelectsProcessors(t *testing.T) {
 
 	p2 := domain.NewProcessorForConfig(domain.Config{Git: domain.GitConfig{PullRequest: true}})
 	// prProcessor is unexported; assert behavior via Process()
-	if err := p2.Process(domain.GitRepository{}, domain.ProviderConfig{}, domain.Config{}); err == nil || err.Error() != "pull request flow not implemented yet" {
-		t.Fatalf("expected PR processor to return not implemented error, got: %v", err)
+	if err := p2.Process(domain.GitRepository{}, domain.ProviderConfig{}, domain.Config{}); err == nil || err.Error() != "git ops not configured" {
+		t.Fatalf("expected PR processor to return 'git ops not configured', got: %v", err)
 	}
 }

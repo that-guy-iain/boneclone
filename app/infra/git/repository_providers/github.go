@@ -2,8 +2,6 @@ package repository_providers
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/google/go-github/v72/github"
 
@@ -32,23 +30,12 @@ func (g GithubRepositoryProvider) GetRepositories() (*[]domain.GitRepository, er
 }
 
 // CreatePullRequest creates a PR on the specified repository within the configured org.
-// The PR body indicates it's a BoneClone PR, lists changed files, and records the original author.
-func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
-	title := "BoneClone update"
-	var bodyBuilder strings.Builder
-	bodyBuilder.WriteString("This is a BoneClone PR.\n\n")
-	if originalAuthor != "" {
-		bodyBuilder.WriteString(fmt.Sprintf("Original author: %s\n\n", originalAuthor))
+// The PR body is produced by the provided buildBody function.
+func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) error {
+	body := ""
+	if buildBody != nil {
+		body = buildBody(repo, baseBranch, headBranch, filesChanged, originalAuthor)
 	}
-	if len(filesChanged) > 0 {
-		bodyBuilder.WriteString("Files changed:\n")
-		for _, f := range filesChanged {
-			bodyBuilder.WriteString("- ")
-			bodyBuilder.WriteString(f)
-			bodyBuilder.WriteString("\n")
-		}
-	}
-	body := bodyBuilder.String()
 
 	newPR := &github.NewPullRequest{
 		Title: github.Ptr(title),

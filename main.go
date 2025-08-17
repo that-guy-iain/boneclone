@@ -74,7 +74,7 @@ func runWithArgs(args []string) error {
 					return err
 				}
 				if prMgr, ok := prov.(domain.PullRequestManager); ok {
-					return prMgr.CreatePullRequest(ctx, repo, baseBranch, headBranch, filesChanged, originalAuthor)
+					return prMgr.CreatePullRequest(ctx, repo, baseBranch, headBranch, domain.DefaultPRTitle, filesChanged, originalAuthor, domain.DefaultPRBodyBuilder)
 				}
 				return fmt.Errorf("provider %s does not support pull requests", pp.Provider)
 			})

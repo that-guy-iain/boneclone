@@ -36,7 +36,7 @@ type AzureRepositoryProvider struct {
 	ctx        context.Context
 }
 
-func (a AzureRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch string, filesChanged []string, originalAuthor string) error {
+func (a AzureRepositoryProvider) CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody domain.PRBodyBuilder) error {
 	gc, err := newGitClient(ctx, a.connection)
 	if err != nil {
 		return err
@@ -52,22 +52,11 @@ func (a AzureRepositoryProvider) CreatePullRequest(ctx context.Context, repo, ba
 
 	sourceRef := "refs/heads/" + headBranch
 	targetRef := "refs/heads/" + baseBranch
-	title := "BoneClone update"
 
-	var bodyBuilder strings.Builder
-	bodyBuilder.WriteString("This is a BoneClone PR.\n\n")
-	if originalAuthor != "" {
-		bodyBuilder.WriteString(fmt.Sprintf("Original author: %s\n\n", originalAuthor))
+	body := ""
+	if buildBody != nil {
+		body = buildBody(repo, baseBranch, headBranch, filesChanged, originalAuthor)
 	}
-	if len(filesChanged) > 0 {
-		bodyBuilder.WriteString("Files changed:\n")
-		for _, f := range filesChanged {
-			bodyBuilder.WriteString("- ")
-			bodyBuilder.WriteString(f)
-			bodyBuilder.WriteString("\n")
-		}
-	}
-	body := bodyBuilder.String()
 
 	pr := &git.GitPullRequest{
 		Title:         &title,
