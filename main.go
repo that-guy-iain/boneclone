@@ -48,7 +48,7 @@ func runWithArgs(args []string) error {
 
 			// Set defaults for missing config values
 			if !k.Exists("git.pullRequest") {
-				if err := k.Set("git.pullRequest", false); err != nil {
+				if err := k.Set("git.pullRequest", true); err != nil {
 					log.Fatalf("error setting default git.pullRequest: %v", err)
 				}
 			}
