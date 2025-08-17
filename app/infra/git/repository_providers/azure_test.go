@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
@@ -39,6 +40,13 @@ func (f fakeGitClient) GetRepositories(ctx context.Context, args git.GetReposito
 	out := make([]git.GitRepository, len(f.repos))
 	copy(out, f.repos)
 	return &out, nil
+}
+
+func (f fakeGitClient) CreatePullRequest(ctx context.Context, args git.CreatePullRequestArgs) (*git.GitPullRequest, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &git.GitPullRequest{}, nil
 }
 
 func strPtr(s string) *string { return &s }
@@ -113,9 +121,14 @@ func (s *statefulGitFake) GetRepositories(ctx context.Context, args git.GetRepos
 	return &out, nil
 }
 
+func (s *statefulGitFake) CreatePullRequest(ctx context.Context, args git.CreatePullRequestArgs) (*git.GitPullRequest, error) {
+	return &git.GitPullRequest{}, nil
+}
+
 func TestAzureProvider_GetRepositories_CoreError(t *testing.T) {
 	origCore := newCoreClient
 	origGit := newGitClient
+	// restore
 	t.Cleanup(func() { newCoreClient = origCore; newGitClient = origGit })
 
 	newCoreClient = func(ctx context.Context, _ *azuredevops.Connection) (coreClient, error) {
@@ -142,5 +155,64 @@ func TestNewAzureRepositoryProvider_Constructs(t *testing.T) {
 	}
 	if _, ok := p.(domain.GitRepositoryProvider); !ok {
 		t.Fatalf("provider does not implement domain.GitRepositoryProvider")
+	}
+}
+
+// Capturing fake and PR args test
+
+type capturingGitClient struct {
+	lastArgs git.CreatePullRequestArgs
+}
+
+func (c *capturingGitClient) GetRepositories(ctx context.Context, args git.GetRepositoriesArgs) (*[]git.GitRepository, error) {
+	empty := []git.GitRepository{}
+	return &empty, nil
+}
+
+func (c *capturingGitClient) CreatePullRequest(ctx context.Context, args git.CreatePullRequestArgs) (*git.GitPullRequest, error) {
+	c.lastArgs = args
+	return &git.GitPullRequest{}, nil
+}
+
+func TestAzureProvider_CreatePullRequest_BuildsArgs(t *testing.T) {
+	origGit := newGitClient
+	defer func() { newGitClient = origGit }()
+
+	cap := &capturingGitClient{}
+	newGitClient = func(ctx context.Context, _ *azuredevops.Connection) (gitClient, error) {
+		return cap, nil
+	}
+
+	provider := &AzureRepositoryProvider{connection: nil, ctx: context.Background()}
+	files := []string{"dir/a.txt", "b.md"}
+	author := "Alice"
+	err := provider.CreatePullRequest(context.Background(), "ProjX/RepoY", "main", "boneclone/update", files, author)
+	if err != nil {
+		t.Fatalf("CreatePullRequest unexpected error: %v", err)
+	}
+
+	args := cap.lastArgs
+	if args.Project == nil || *args.Project != "ProjX" {
+		t.Fatalf("expected Project 'ProjX', got %#v", args.Project)
+	}
+	if args.RepositoryId == nil || *args.RepositoryId != "RepoY" {
+		t.Fatalf("expected RepositoryId 'RepoY', got %#v", args.RepositoryId)
+	}
+	pr := args.GitPullRequestToCreate
+	if pr == nil || pr.Title == nil || *pr.Title != "BoneClone update" {
+		t.Fatalf("unexpected title: %#v", pr)
+	}
+	if pr.SourceRefName == nil || *pr.SourceRefName != "refs/heads/boneclone/update" {
+		t.Fatalf("unexpected source ref: %#v", pr.SourceRefName)
+	}
+	if pr.TargetRefName == nil || *pr.TargetRefName != "refs/heads/main" {
+		t.Fatalf("unexpected target ref: %#v", pr.TargetRefName)
+	}
+	if pr.Description == nil {
+		t.Fatalf("expected description")
+	}
+	desc := *pr.Description
+	if !strings.Contains(desc, "This is a BoneClone PR.") || !strings.Contains(desc, "Original author: Alice") || !strings.Contains(desc, "- dir/a.txt") || !strings.Contains(desc, "- b.md") {
+		t.Fatalf("unexpected description: %q", desc)
 	}
 }
