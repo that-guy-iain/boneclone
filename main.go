@@ -2,16 +2,14 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
-	"sync"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
 	"github.com/urfave/cli/v3"
-	
+
 	"go.iain.rocks/boneclone/app/domain"
 	"go.iain.rocks/boneclone/app/infra/git"
 	"go.iain.rocks/boneclone/app/infra/git/repository_providers"
@@ -38,7 +36,6 @@ func runWithArgs(args []string) error {
 		Name:                  "run",
 		Usage:                 "Run BoneClone",
 		Action: func(cxt context.Context, c *cli.Command) error {
-			var wg sync.WaitGroup
 			configFile := c.String("config")
 
 			if err := k.Load(file.Provider(configFile), yaml.Parser()); err != nil {
@@ -46,49 +43,12 @@ func runWithArgs(args []string) error {
 			}
 
 			var config domain.Config
-			err := k.Unmarshal("", &config)
-
-			if err != nil {
+			if err := k.Unmarshal("", &config); err != nil {
 				log.Fatalf("error unmarshalling config: %v", err)
 			}
-			for _, pp := range config.Providers {
 
-				provider, _ := repository_providers.NewProvider(pp)
-				repositories, _ := provider.GetRepositories()
-
-				for _, repo := range *repositories {
-					wg.Add(1)
-					go func(repo domain.GitRepository) {
-						defer wg.Done()
-
-						fmt.Printf("repo: %s\n", repo.Url)
-						gitRepo, fs, err := git.CloneGit(repo, pp)
-
-						if err != nil {
-							fmt.Printf("error cloning repo %s: %v\n", repo.Url, err)
-							return
-						}
-
-						valid, err := git.IsValidForBoneClone(gitRepo, config)
-
-						if err != nil {
-							fmt.Printf("error checking repo: %v\n", err)
-
-							return
-						}
-						if valid {
-
-							files := git.CopyFiles(gitRepo, fs, config.Files, pp)
-							if files != nil {
-								fmt.Printf("files: %v\n", files)
-							}
-						}
-					}(repo)
-				}
-
-			}
-			wg.Wait()
-			return nil
+			processor := git.NewProcessor()
+			return domain.Run(cxt, config, repository_providers.NewProvider, processor)
 		},
 	}
 
