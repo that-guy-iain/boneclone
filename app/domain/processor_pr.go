@@ -7,12 +7,14 @@ import (
 )
 
 // prProcessor implements the Pull Request flow: clone -> validate -> copy+commit -> create PR.
-type prProcessor struct{
+type prProcessor struct {
 	ops         GitOperations
 	newProvider ProviderFactory
 }
 
-func newPRProcessor(ops GitOperations, pf ProviderFactory) *prProcessor { return &prProcessor{ops: ops, newProvider: pf} }
+func newPRProcessor(ops GitOperations, pf ProviderFactory) *prProcessor {
+	return &prProcessor{ops: ops, newProvider: pf}
+}
 
 func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Config) error {
 	if p.ops == nil {

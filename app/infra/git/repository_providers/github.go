@@ -49,9 +49,13 @@ func (g GithubRepositoryProvider) CreatePullRequest(ctx context.Context, repo, b
 		return domain.PRInfo{}, err
 	}
 	id := 0
-	if pr.Number != nil { id = *pr.Number }
+	if pr.Number != nil {
+		id = *pr.Number
+	}
 	url := ""
-	if pr.HTMLURL != nil { url = *pr.HTMLURL }
+	if pr.HTMLURL != nil {
+		url = *pr.HTMLURL
+	}
 	return domain.PRInfo{ID: id, URL: url}, nil
 }
 
