@@ -19,8 +19,8 @@ type fakeOps struct {
 func (f *fakeOps) CloneGit(repo GitRepository, config ProviderConfig) (*gogit.Repository, billy.Filesystem, error) {
 	return nil, nil, f.cloneErr
 }
-func (f *fakeOps) IsValidForBoneClone(repo *gogit.Repository, config Config) (bool, error) {
-	return f.valid, f.validErr
+func (f *fakeOps) IsValidForBoneClone(repo *gogit.Repository, config Config) (bool, RemoteConfig, error) {
+	return f.valid, RemoteConfig{}, f.validErr
 }
 func (f *fakeOps) CopyFiles(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig, targetBranch string) error {
 	f.copyCalled = true

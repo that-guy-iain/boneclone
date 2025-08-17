@@ -54,7 +54,7 @@ type PullRequestManager interface {
 
 type GitOperations interface {
 	CloneGit(repo GitRepository, config ProviderConfig) (*gogit.Repository, billy.Filesystem, error)
-	IsValidForBoneClone(repo *gogit.Repository, config Config) (bool, error)
+	IsValidForBoneClone(repo *gogit.Repository, config Config) (bool, RemoteConfig, error)
 	CopyFiles(repo *gogit.Repository, fs billy.Filesystem, config Config, provider ProviderConfig, targetBranch string) error
 }
 

@@ -24,8 +24,8 @@ func (f *fakeOpsPR) CloneGit(repo GitRepository, config ProviderConfig) (*gogit.
 	return nil, nil, f.cloneErr
 }
 
-func (f *fakeOpsPR) IsValidForBoneClone(repo *gogit.Repository, cfg Config) (bool, error) {
-	return f.valid, f.validErr
+func (f *fakeOpsPR) IsValidForBoneClone(repo *gogit.Repository, cfg Config) (bool, RemoteConfig, error) {
+	return f.valid, RemoteConfig{}, f.validErr
 }
 
 func (f *fakeOpsPR) CopyFiles(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig, targetBranch string) error {

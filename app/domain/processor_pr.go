@@ -27,7 +27,7 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 		return fmt.Errorf("clone: %w", err)
 	}
 
-	valid, err := p.ops.IsValidForBoneClone(gitRepo, config)
+	valid, _, err := p.ops.IsValidForBoneClone(gitRepo, config)
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}

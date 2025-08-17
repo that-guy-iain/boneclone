@@ -16,6 +16,9 @@ import (
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/memory"
+	"github.com/knadh/koanf/parsers/yaml"
+	"github.com/knadh/koanf/providers/rawbytes"
+	"github.com/knadh/koanf/v2"
 
 	"go.iain.rocks/boneclone/app/domain"
 )
@@ -66,48 +69,66 @@ func (o *Operations) CloneGit(repo domain.GitRepository, config domain.ProviderC
 	return r, fs, nil
 }
 
-func (o *Operations) IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, error) {
+func (o *Operations) IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, domain.RemoteConfig, error) {
+	rCfg := domain.RemoteConfig{}
+
 	headRef, err := repo.Head()
 	if err != nil {
-		return false, err
+		return false, rCfg, err
 	}
 	headCommit, err := repo.CommitObject(headRef.Hash())
 	if err != nil {
-		return false, err
+		return false, rCfg, err
 	}
 	tree, err := headCommit.Tree()
 	if err != nil {
-		return false, err
+		return false, rCfg, err
 	}
 
 	file, err := tree.File(config.Identifier.Filename)
 	if err != nil {
 		if errors.Is(err, object.ErrFileNotFound) {
-			return false, nil
+			return false, rCfg, nil
 		}
-		return false, err
+		return false, rCfg, err
 	}
 
-	// 6. Get the Blob object and read its content
 	blob, err := repo.BlobObject(file.Hash)
 	if err != nil {
-		return false, err
+		return false, rCfg, err
 	}
 
 	reader, err := blob.Reader()
 	if err != nil {
-		return false, err
+		return false, rCfg, err
 	}
 	defer func() { _ = reader.Close() }()
 
-	// Maybe change to io.Copy
 	content, err := io.ReadAll(reader)
 	if err != nil {
-		return false, err
+		return false, rCfg, err
 	}
-	contentStr := string(content)
 
-	return strings.Contains(contentStr, config.Identifier.Content), nil
+	k := koanf.NewWithConf(koanf.Conf{Delim: ".", StrictMerge: true})
+	if err := k.Load(rawbytes.Provider(content), yaml.Parser()); err != nil {
+		// Invalid YAML -> skip repository without error
+		return false, domain.RemoteConfig{}, nil
+	}
+	if err := k.Unmarshal("", &rCfg); err != nil {
+		// Invalid structure -> skip repository without error
+		return false, domain.RemoteConfig{}, nil
+	}
+
+	skel := strings.TrimSpace(config.Name)
+	if skel == "" {
+		return false, rCfg, nil
+	}
+	for _, a := range rCfg.Accepts {
+		if strings.TrimSpace(a) == skel {
+			return true, rCfg, nil
+		}
+	}
+	return false, rCfg, nil
 }
 
 func (o *Operations) CopyFiles(
@@ -159,7 +180,7 @@ func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Rep
 	return DefaultOps.CloneGit(repo, config)
 }
 
-func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, error) {
+func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, domain.RemoteConfig, error) {
 	return DefaultOps.IsValidForBoneClone(repo, config)
 }
 

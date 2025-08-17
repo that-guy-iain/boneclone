@@ -31,3 +31,8 @@ type GitConfig struct {
 	PullRequest  bool   `koanf:"pullRequest"`
 	TargetBranch string `koanf:"targetBranch"`
 }
+
+type RemoteConfig struct {
+	Reviewers []string `koanf:"reviewers"`
+	Accepts   []string `koanf:"accepts"`
+}
