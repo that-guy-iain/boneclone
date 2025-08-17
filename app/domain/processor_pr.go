@@ -7,12 +7,14 @@ import (
 )
 
 // prProcessor implements the Pull Request flow: clone -> validate -> copy+commit -> create PR.
-type prProcessor struct{
+type prProcessor struct {
 	ops         GitOperations
 	newProvider ProviderFactory
 }
 
-func newPRProcessor(ops GitOperations, pf ProviderFactory) *prProcessor { return &prProcessor{ops: ops, newProvider: pf} }
+func newPRProcessor(ops GitOperations, pf ProviderFactory) *prProcessor {
+	return &prProcessor{ops: ops, newProvider: pf}
+}
 
 func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Config) error {
 	if p.ops == nil {
@@ -27,7 +29,7 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 		return fmt.Errorf("clone: %w", err)
 	}
 
-	valid, _, err := p.ops.IsValidForBoneClone(gitRepo, config)
+	valid, remoteCfg, err := p.ops.IsValidForBoneClone(gitRepo, config)
 	if err != nil {
 		return fmt.Errorf("validate: %w", err)
 	}
@@ -60,8 +62,13 @@ func (p *prProcessor) Process(repo GitRepository, pp ProviderConfig, config Conf
 		return fmt.Errorf("create PR: %w", err)
 	}
 	if prMgr, ok := prov.(PullRequestManager); ok {
-		if err := prMgr.CreatePullRequest(context.Background(), repo.Name, base, branchName, prTitle, nil, "", DefaultPRBodyBuilder); err != nil {
+		pr, err := prMgr.CreatePullRequest(context.Background(), repo.Name, base, branchName, prTitle, nil, "", DefaultPRBodyBuilder)
+		if err != nil {
 			return fmt.Errorf("create PR: %w", err)
+		}
+		// Attempt to assign reviewers from remote config; failures are ignored (silent)
+		if len(remoteCfg.Reviewers) > 0 {
+			_ = prMgr.AssignReviewers(context.Background(), repo.Name, pr, remoteCfg.Reviewers)
 		}
 		return nil
 	}

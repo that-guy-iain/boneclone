@@ -48,8 +48,17 @@ func DefaultPRBodyBuilder(repo, baseBranch, headBranch string, filesChanged []st
 	return b.String()
 }
 
+// PRInfo carries provider-agnostic pull request identification.
+// ID is the provider-specific PR number/IID/ID suitable for subsequent operations.
+// URL is the web URL if available.
+type PRInfo struct {
+	ID  int
+	URL string
+}
+
 type PullRequestManager interface {
-	CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody PRBodyBuilder) error
+	CreatePullRequest(ctx context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody PRBodyBuilder) (PRInfo, error)
+	AssignReviewers(ctx context.Context, repo string, pr PRInfo, reviewers []string) error
 }
 
 type GitOperations interface {

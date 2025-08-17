@@ -44,13 +44,15 @@ type fakePRProviderManager struct {
 
 func (f *fakePRProviderManager) GetRepositories() (*[]GitRepository, error) { return &[]GitRepository{}, nil }
 
-func (f *fakePRProviderManager) CreatePullRequest(_ context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody PRBodyBuilder) error {
+func (f *fakePRProviderManager) CreatePullRequest(_ context.Context, repo, baseBranch, headBranch, title string, filesChanged []string, originalAuthor string, buildBody PRBodyBuilder) (PRInfo, error) {
 	f.called = true
 	f.repo = repo
 	f.base = baseBranch
 	f.head = headBranch
-	return nil
+	return PRInfo{ID: 1, URL: "http://example/pr/1"}, nil
 }
+
+func (f *fakePRProviderManager) AssignReviewers(_ context.Context, _ string, _ PRInfo, _ []string) error { return nil }
 
 func TestPRProcessor_ErrWhenOpsNil(t *testing.T) {
 	fakeProv := &fakePRProviderManager{}
