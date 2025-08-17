@@ -2,11 +2,31 @@ package repository_providers
 
 import (
 	"context"
+
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/core"
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
+
 	"go.iain.rocks/boneclone/app/domain"
 )
+
+// Small interfaces to allow testing without the full Azure DevOps clients.
+type coreClient interface {
+	GetProjects(context.Context, core.GetProjectsArgs) (*core.GetProjectsResponseValue, error)
+}
+
+type gitClient interface {
+	GetRepositories(context.Context, git.GetRepositoriesArgs) (*[]git.GitRepository, error)
+}
+
+// Constructors are variables so tests can stub them.
+var newCoreClient = func(ctx context.Context, conn *azuredevops.Connection) (coreClient, error) {
+	return core.NewClient(ctx, conn)
+}
+
+var newGitClient = func(ctx context.Context, conn *azuredevops.Connection) (gitClient, error) {
+	return git.NewClient(ctx, conn)
+}
 
 type AzureRepositoryProvider struct {
 	connection *azuredevops.Connection
@@ -16,13 +36,13 @@ type AzureRepositoryProvider struct {
 func (a AzureRepositoryProvider) GetRepositories() (*[]domain.GitRepository, error) {
 	var output []domain.GitRepository
 
-	coreClient, err := core.NewClient(a.ctx, a.connection)
+	coreClient, err := newCoreClient(a.ctx, a.connection)
 	getProjectsArgs := core.GetProjectsArgs{}
 	if err != nil {
 		return nil, err
 	}
 
-	gitClient, err := git.NewClient(a.ctx, a.connection)
+	gitClient, err := newGitClient(a.ctx, a.connection)
 	if err != nil {
 		return nil, err
 	}
