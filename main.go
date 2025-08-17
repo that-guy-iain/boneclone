@@ -48,8 +48,13 @@ func runWithArgs(args []string) error {
 
 			// Set defaults for missing config values
 			if !k.Exists("git.pullRequest") {
-				if err := k.Set("git.pullRequest", true); err != nil {
+				if err := k.Set("git.pullRequest", false); err != nil {
 					log.Fatalf("error setting default git.pullRequest: %v", err)
+				}
+			}
+			if !k.Exists("git.targetBranch") {
+				if err := k.Set("git.targetBranch", ""); err != nil {
+					log.Fatalf("error setting default git.targetBranch: %v", err)
 				}
 			}
 
@@ -60,7 +65,7 @@ func runWithArgs(args []string) error {
 
 			// Wire infra git operations into domain processor to avoid package cycles
 			domain.UseGitOps(git.CloneGit, git.IsValidForBoneClone, git.CopyFiles)
-			processor := domain.NewProcessor()
+			processor := domain.NewProcessorForConfig(config)
 			return domain.Run(cxt, config, repository_providers.NewProvider, processor)
 		},
 	}

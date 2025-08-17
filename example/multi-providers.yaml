@@ -19,3 +19,9 @@ files:
 identifier:
    filename: .boneclone
    content: golang
+
+git:
+  # When true, use PR flow (placeholder for now). When false, push directly.
+  pullRequest: false
+  # When set, commits will be pushed to this branch (created if missing)
+  targetBranch: main

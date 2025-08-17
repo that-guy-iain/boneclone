@@ -10,7 +10,8 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
-	"github.com/go-git/go-git/v6"
+	git "github.com/go-git/go-git/v6"
+	gogitcfg "github.com/go-git/go-git/v6/config"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/memory"
@@ -136,9 +137,13 @@ func CopyFiles(
 			return err
 		}
 
-		err = repo.Push(&git.PushOptions{
+		opts := &git.PushOptions{
 			Auth: &http.BasicAuth{Username: provider.Username, Password: provider.Token},
-		})
+		}
+		if tb := strings.TrimSpace(config.Git.TargetBranch); tb != "" {
+			opts.RefSpecs = []gogitcfg.RefSpec{gogitcfg.RefSpec("HEAD:refs/heads/" + tb)}
+		}
+		err = repo.Push(opts)
 		if err != nil {
 			if errors.Is(err, git.NoErrAlreadyUpToDate) {
 				return nil
