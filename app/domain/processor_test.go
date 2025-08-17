@@ -33,7 +33,7 @@ func TestProcessor_Process_CloneError(t *testing.T) {
 		}
 		// Not expected to be called
 		isValidForBoneCloneFn = func(repo *gogit.Repository, config Config) (bool, error) { return false, nil }
-		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg FileConfig, pp ProviderConfig) error { return nil }
+		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error { return nil }
 
 		err := p.Process(repo, pp, cfg)
 		if err == nil || err.Error() != "clone: boom" {
@@ -55,7 +55,7 @@ func TestProcessor_Process_ValidateError(t *testing.T) {
 		isValidForBoneCloneFn = func(repo *gogit.Repository, config Config) (bool, error) {
 			return false, errors.New("valerr")
 		}
-		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg FileConfig, pp ProviderConfig) error { return nil }
+		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error { return nil }
 
 		err := p.Process(repo, pp, cfg)
 		if err == nil || err.Error() != "validate: valerr" {
@@ -76,7 +76,7 @@ func TestProcessor_Process_NotValid_SkipsCopy(t *testing.T) {
 		}
 		isValidForBoneCloneFn = func(repo *gogit.Repository, config Config) (bool, error) { return false, nil }
 		copyCalled := false
-		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg FileConfig, pp ProviderConfig) error {
+		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error {
 			copyCalled = true
 			return nil
 		}
@@ -102,7 +102,7 @@ func TestProcessor_Process_Valid_CopySuccess(t *testing.T) {
 		}
 		isValidForBoneCloneFn = func(repo *gogit.Repository, config Config) (bool, error) { return true, nil }
 		copyCalled := false
-		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg FileConfig, pp ProviderConfig) error {
+		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error {
 			copyCalled = true
 			return nil
 		}
@@ -127,7 +127,7 @@ func TestProcessor_Process_CopyError(t *testing.T) {
 			return nil, nil, nil
 		}
 		isValidForBoneCloneFn = func(repo *gogit.Repository, config Config) (bool, error) { return true, nil }
-		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg FileConfig, pp ProviderConfig) error {
+		copyFilesFn = func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error {
 			return errors.New("cperr")
 		}
 

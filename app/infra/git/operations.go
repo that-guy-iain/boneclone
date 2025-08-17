@@ -17,7 +17,11 @@ import (
 	"go.iain.rocks/boneclone/app/domain"
 )
 
-const GIT_DEPTH = 1
+const (
+	DefaultCommiterName  = "boneclone"
+	DefaultCommiterEmail = "boneclone@example.org"
+	GitDepth             = 1
+)
 
 func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, billy.Filesystem, error) {
 	fs := memfs.New()
@@ -27,7 +31,7 @@ func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Rep
 	}
 	r, err := git.Clone(memory.NewStorage(), fs, &git.CloneOptions{
 		URL:   repo.Url,
-		Depth: GIT_DEPTH,
+		Depth: GitDepth,
 		Auth:  auth,
 		Bare:  false,
 	})
@@ -86,7 +90,7 @@ func IsValidForBoneClone(repo *git.Repository, config domain.Config) (bool, erro
 func CopyFiles(
 	repo *git.Repository,
 	fs billy.Filesystem,
-	config domain.FileConfig,
+	config domain.Config,
 	provider domain.ProviderConfig,
 ) error {
 	worktree, err := repo.Worktree()
@@ -94,7 +98,7 @@ func CopyFiles(
 		return err
 	}
 
-	for _, definedFile := range config.Include {
+	for _, definedFile := range config.Files.Include {
 
 		files, err := getAllFilenames(definedFile)
 		if err != nil {
@@ -103,7 +107,7 @@ func CopyFiles(
 
 		for _, file := range files {
 
-			if isExcluded(file, config.Exclude) {
+			if isExcluded(file, config.Files.Exclude) {
 				continue
 			}
 
@@ -138,10 +142,20 @@ func CopyFiles(
 				return err
 			}
 		}
+		// Determine author from config with defaults
+		name := config.Git.Name
+		if name == "" {
+			name = DefaultCommiterName
+		}
+		email := config.Git.Email
+		if email == "" {
+			email = DefaultCommiterEmail
+		}
+
 		_, err = worktree.Commit("Updated via boneclone", &git.CommitOptions{
 			Author: &object.Signature{
-				Name:  "boneclone",
-				Email: "boneclone@example.com",
+				Name:  name,
+				Email: email,
 				When:  time.Now(),
 			},
 		})
