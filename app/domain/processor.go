@@ -18,11 +18,11 @@ var (
 func UseGitOps(
 	clone func(repo GitRepository, config ProviderConfig) (*gogit.Repository, billy.Filesystem, error),
 	validate func(repo *gogit.Repository, config Config) (bool, error),
-	copy func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error,
+	copyFn func(repo *gogit.Repository, fs billy.Filesystem, cfg Config, pp ProviderConfig) error,
 ) {
 	cloneGitFn = clone
 	isValidForBoneCloneFn = validate
-	copyFilesFn = copy
+	copyFilesFn = copyFn
 }
 
 // Processor implements RepoProcessor using wired git operations.
