@@ -12,6 +12,7 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	git "github.com/go-git/go-git/v6"
 	gogitcfg "github.com/go-git/go-git/v6/config"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/go-git/go-git/v6/plumbing/object"
 	"github.com/go-git/go-git/v6/plumbing/transport/http"
 	"github.com/go-git/go-git/v6/storage/memory"
@@ -121,6 +122,35 @@ func (o *Operations) CopyFiles(
 		return err
 	}
 
+	// Ensure we are on the target branch locally; create it if needed and base it on
+	// origin/<targetBranch> when available, otherwise on current HEAD.
+	tb := strings.TrimSpace(targetBranch)
+	if tb != "" {
+		// Compute reference names
+		tbRef := plumbing.NewBranchReferenceName(tb)
+		// Determine current HEAD to avoid redundant checkout
+		headRef, _ := repo.Head() // ignore error; if error occurs later checkout will fail accordingly
+		if headRef == nil || headRef.Name() != tbRef {
+			// Try to checkout existing local branch first
+			if err := worktree.Checkout(&git.CheckoutOptions{Branch: tbRef}); err != nil {
+				// Not present locally; attempt to create starting from remote/origin branch if available
+				var baseHash plumbing.Hash
+				if rref, rerr := repo.Reference(plumbing.NewRemoteReferenceName("origin", tb), true); rerr == nil {
+					baseHash = rref.Hash()
+				} else if headRef != nil {
+					baseHash = headRef.Hash()
+				}
+				co := &git.CheckoutOptions{Branch: tbRef, Create: true}
+				if baseHash != (plumbing.Hash{}) {
+					co.Hash = baseHash
+				}
+				if err := worktree.Checkout(co); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	for _, definedFile := range config.Files.Include {
 		files, err := getAllFilenames(definedFile)
 		if err != nil {
@@ -161,7 +191,8 @@ func (o *Operations) CopyFiles(
 			Auth: &http.BasicAuth{Username: provider.Username, Password: provider.Token},
 		}
 		if tb := strings.TrimSpace(targetBranch); tb != "" {
-			opts.RefSpecs = []gogitcfg.RefSpec{gogitcfg.RefSpec("HEAD:refs/heads/" + tb)}
+			localRef := "refs/heads/" + tb
+			opts.RefSpecs = []gogitcfg.RefSpec{gogitcfg.RefSpec(localRef + ":" + localRef)}
 		}
 		err = repo.Push(opts)
 		if err != nil {
