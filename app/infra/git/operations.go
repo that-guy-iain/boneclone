@@ -20,7 +20,9 @@ import (
 const (
 	DefaultCommiterName  = "boneclone"
 	DefaultCommiterEmail = "boneclone@example.org"
-	GitDepth             = 1
+	DefaultCommitterName  = "boneclone"
+	DefaultCommitterEmail = "boneclone@example.org"
+	GitDepth              = 1
 )
 
 func CloneGit(repo domain.GitRepository, config domain.ProviderConfig) (*git.Repository, billy.Filesystem, error) {
