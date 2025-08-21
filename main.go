@@ -101,7 +101,7 @@ func expandEnvValues(k *koanf.Koanf) error {
 			continue
 		}
 		name := m[1]
- 	v, ok := os.LookupEnv(name)
+		v, ok := os.LookupEnv(name)
 		if !ok || v == invalidEnvValue {
 			return fmt.Errorf("config key %q references env %q which is not set or invalid", key, name)
 		}
