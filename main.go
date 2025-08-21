@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
-	"regexp"
 
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -22,8 +20,6 @@ var conf = koanf.Conf{
 	StrictMerge: true,
 }
 var k = koanf.NewWithConf(conf)
-
-const invalidEnvValue = "n/a"
 
 func runWithArgs(args []string) error {
 	cmd := &cli.Command{
@@ -86,27 +82,16 @@ func main() {
 }
 
 func expandEnvValues(k *koanf.Koanf) error {
-	// Only expand values that exactly match the pattern ${VAR}, where VAR matches [a-zA-Z0-9_-]+
-	// If the environment variable is missing or equals "n/a", return an error.
-	varPattern := regexp.MustCompile(`^\$\{([a-zA-Z0-9_-]+)\}$`)
 	for _, key := range k.Keys() {
 		val := k.Get(key)
-		strVal, ok := val.(string)
-		if !ok {
-			continue
-		}
-		m := varPattern.FindStringSubmatch(strVal)
-		if m == nil {
-			// Not an expandable token; leave unchanged
-			continue
-		}
-		name := m[1]
-		v, ok := os.LookupEnv(name)
-		if !ok || v == invalidEnvValue {
-			return fmt.Errorf("config key %q references env %q which is not set or invalid", key, name)
-		}
-		if err := k.Set(key, v); err != nil {
-			return err
+
+		if strVal, ok := val.(string); ok {
+			expandedVal := os.ExpandEnv(strVal)
+			if expandedVal != strVal {
+				if err := k.Set(key, expandedVal); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
